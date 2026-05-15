@@ -3,38 +3,39 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Senshi-React AI</title>
+  <title>Senshi-React AI - Calibración Total</title>
   
+  <!-- LIBRERÍAS DE IA -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
 
   <style>
-    /* Estilos optimizados para que nada se oculte */
     body { 
       margin: 0; 
       background: #000; 
       color: white; 
-      font-family: sans-serif; 
+      font-family: 'Arial', sans-serif; 
       display: flex; 
       flex-direction: column; 
       height: 100vh; 
+      overflow: hidden;
     }
 
     #status { 
-      padding: 15px; 
+      padding: 20px; 
       background: #222; 
-      font-size: 20px; 
+      font-size: 22px; 
       font-weight: bold; 
-      border-bottom: 4px solid #FFD700; /* Color Mostaza */
+      border-bottom: 4px solid #FFD700; 
       text-align: center;
+      min-height: 30px;
     }
 
     #container { 
       position: relative; 
-      flex-grow: 1; /* Esto hace que la cámara use el espacio disponible */
+      flex-grow: 1; 
       background: #111; 
-      overflow: hidden;
     }
 
     #input_video { 
@@ -54,13 +55,12 @@
       transform: scaleX(-1); 
     }
     
-    /* Contenedor de botones fijo abajo */
     .controls { 
-      padding: 20px; 
+      padding: 25px; 
       background: #000;
       display: flex; 
       flex-direction: column; 
-      gap: 10px;
+      gap: 12px;
     }
 
     button { 
@@ -69,20 +69,13 @@
       font-size: 18px; 
       font-weight: bold; 
       border: none; 
-      border-radius: 10px; 
+      border-radius: 12px; 
       text-transform: uppercase;
+      cursor: pointer;
     }
 
-    #btn_start { 
-      background: #FFD700; /* Mostaza */
-      color: #000; 
-    }
-
-    #btn_entrenar { 
-      background: #FFF; 
-      color: #000; 
-      display: none; /* Se activa después de la cámara */
-    }
+    #btn_start { background: #FFD700; color: #000; }
+    #btn_entrenar { background: #FFF; color: #000; display: none; }
   </style>
 </head>
 <body>
@@ -99,7 +92,7 @@
     <button id="btn_entrenar">2. INICIAR ENTRENAMIENTO</button>
   </div>
 
-<script>
+  <script>
     const videoElement = document.getElementById('input_video');
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
@@ -107,14 +100,14 @@
     const btnStart = document.getElementById('btn_start');
     const btnEntrenar = document.getElementById('btn_entrenar');
 
+    // VARIABLES DE CONTROL
     let etapa = "ESPERANDO"; 
     let tiempoEstimulo = 0;
     let tiempoReaccion = 0;
     
-    // VARIABLES DE CALIBRACIÓN
-    let zBaseDer = 0;
-    let zBaseIzq = 0;
-    let sensibilidad = 0.15; // Cuánta distancia debe recorrer el puño (0.15 es aprox. 20-30cm)
+    // Variables de posición para detectar movimiento real
+    let manoX_inicio = 0;
+    let manoY_inicio = 0;
 
     const pose = new Pose({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
@@ -122,8 +115,8 @@
 
     pose.setOptions({
       modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.6
     });
 
     pose.onResults((results) => {
@@ -135,21 +128,36 @@
       
       if (results.poseLandmarks) {
         const landmarks = results.poseLandmarks;
+        
+        // Dibujo de esqueleto en color mostaza
         drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, {color: '#FFFFFF', lineWidth: 2});
         drawLandmarks(canvasCtx, landmarks, {color: '#FFD700', lineWidth: 1});
 
         const munecaDer = landmarks[16];
         const munecaIzq = landmarks[15];
+        const manoActualX = (munecaDer.x + munecaIzq.x) / 2;
+        const manoActualY = (munecaDer.y + munecaIzq.y) / 2;
 
-        // FASE DE ESTIMULO
+        // FASE PREPARANDO: Guardamos la posición de la guardia
+        if (etapa === "PREPARANDO") {
+          manoX_inicio = manoActualX;
+          manoY_inicio = manoActualY;
+        }
+
+        // FASE ESTIMULO: Buscamos el movimiento explosivo
         if (etapa === "ESTIMULO") {
-          const tiempoTranscurrido = performance.now() - tiempoEstimulo;
+          const ahora = performance.now();
+          const tiempoTranscurrido = ahora - tiempoEstimulo;
 
-          // UMBRAL DE SEGURIDAD ABSOLUTA
-          // -0.6 es un valor MUY cercano a la cámara. 
-          // Si el puño no llega casi a tocar la pantalla, no se activará.
-          // Además, ignoramos cualquier cosa que pase antes de 200ms para evitar falsos positivos por parpadeo.
-          if ((munecaDer.z < -0.6 || munecaIzq.z < -0.6) && tiempoTranscurrido > 200) {
+          // Calculamos cuánto se ha movido la mano desde la guardia (en % de pantalla)
+          const distancia = Math.sqrt(
+            Math.pow(manoActualX - manoX_inicio, 2) + 
+            Math.pow(manoActualY - manoY_inicio, 2)
+          );
+
+          // UMBRAL DE MOVIMIENTO: 0.20 (20% de la pantalla)
+          // UMBRAL DE TIEMPO: 200ms (evita falsos positivos inmediatos)
+          if (distancia > 0.20 && tiempoTranscurrido > 200) {
             tiempoReaccion = tiempoTranscurrido;
             finalizarGolpe();
           }
@@ -157,10 +165,11 @@
       }
       canvasCtx.restore();
     });
+
     function lanzarEstimulo() {
       etapa = "ESTIMULO";
       tiempoEstimulo = performance.now();
-      statusDiv.innerText = "¡GOLPEA YA!";
+      statusDiv.innerText = "¡GOLPEA!";
       statusDiv.style.background = "#FF0000"; 
       statusDiv.style.color = "white";
     }
@@ -168,26 +177,26 @@
     function finalizarGolpe() {
       etapa = "GOLPE";
       const segs = (tiempoReaccion / 1000).toFixed(3);
-      statusDiv.innerText = `TIEMPO: ${segs}s`;
+      statusDiv.innerText = `REACCIÓN: ${segs}s`;
       statusDiv.style.background = "#FFD700"; 
       statusDiv.style.color = "black";
     }
 
     function prepararSiguiente() {
       etapa = "PREPARANDO";
-      statusDiv.innerText = "¡EN GUARDIA! (No te muevas)";
+      statusDiv.innerText = "¡EN GUARDIA! NO TE MUEVAS";
       statusDiv.style.background = "#222";
       statusDiv.style.color = "white";
       
-      // Espera aleatoria para que el atleta no prediga el color rojo
       const espera = Math.floor(Math.random() * 3000) + 2000;
       setTimeout(() => {
         if(etapa === "PREPARANDO") lanzarEstimulo();
       }, espera);
     }
 
+    // BOTONES CON EVENT LISTENERS (Más estables en Android)
     btnStart.addEventListener('click', async () => {
-      statusDiv.innerText = "CONECTANDO IA...";
+      statusDiv.innerText = "CARGANDO IA...";
       try {
         const camera = new Camera(videoElement, {
           onFrame: async () => { await pose.send({image: videoElement}); },
@@ -198,13 +207,14 @@
         btnEntrenar.style.display = "block"; 
         statusDiv.innerText = "SISTEMA LISTO";
       } catch (e) {
-        statusDiv.innerText = "ERROR DE CÁMARA";
+        statusDiv.innerText = "ERROR AL ACTIVAR CÁMARA";
       }
     });
 
     btnEntrenar.addEventListener('click', () => {
       prepararSiguiente();
     });
+
   </script>
 </body>
 </html>
