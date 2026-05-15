@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Senshi-React AI - Extensión Proporcional</title>
+  <title>Senshi-React AI - Calibración Automática</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -47,6 +47,10 @@
     let tiempoEstimulo = 0;
     let tiempoReaccion = 0;
 
+    // Variables de Calibración Automática
+    let distanciaBase = 0;
+    let umbralDinamico = 0;
+
     const pose = new Pose({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
     });
@@ -69,19 +73,23 @@
         drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, {color: '#FFFFFF', lineWidth: 2});
         drawLandmarks(canvasCtx, landmarks, {color: '#FFD700', lineWidth: 1});
 
+        // Calculamos distancia Hombro-Muñeca actual
+        const dDer = Math.hypot(landmarks[12].x - landmarks[16].x, landmarks[12].y - landmarks[16].y);
+        const dIzq = Math.hypot(landmarks[11].x - landmarks[15].x, landmarks[11].y - landmarks[15].y);
+        const maxDist = Math.max(dDer, dIzq);
+
+        // EN GUARDIA: Guardamos la distancia en reposo
+        if (etapa === "PREPARANDO") {
+          distanciaBase = maxDist;
+          // El umbral es la distancia base + 30% de incremento
+          umbralDinamico = distanciaBase * 1.30;
+        }
+
+        // EN ESTIMULO: Esperamos que supere el umbral dinámico
         if (etapa === "ESTIMULO") {
-          const ahora = performance.now();
-          const tiempoTranscurrido = ahora - tiempoEstimulo;
+          const tiempoTranscurrido = performance.now() - tiempoEstimulo;
 
-          // Medimos la distancia 2D entre hombro y muñeca
-          // Brazo Derecho (12-16), Brazo Izquierdo (11-15)
-          const distDer = Math.hypot(landmarks[12].x - landmarks[16].x, landmarks[12].y - landmarks[16].y);
-          const distIzq = Math.hypot(landmarks[11].x - landmarks[15].x, landmarks[11].y - landmarks[15].y);
-
-          // IMPORTANTE: En guardia la distancia es corta (ej. 0.1). 
-          // Al estirar el brazo hacia la cámara, la distancia aumenta visualmente.
-          // Prueba con 0.35; si no detecta, bájalo a 0.25.
-          if ((distDer > 0.35 || distIzq > 0.35) && tiempoTranscurrido > 150) {
+          if (maxDist > umbralDinamico && tiempoTranscurrido > 150) {
             tiempoReaccion = tiempoTranscurrido;
             finalizarGolpe();
           }
@@ -108,7 +116,7 @@
 
     function prepararSiguiente() {
       etapa = "PREPARANDO";
-      statusDiv.innerText = "¡EN GUARDIA!";
+      statusDiv.innerText = "¡EN GUARDIA! NO TE MUEVAS";
       statusDiv.style.background = "#222";
       statusDiv.style.color = "white";
       const espera = Math.floor(Math.random() * 3000) + 2000;
