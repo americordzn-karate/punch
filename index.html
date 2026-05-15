@@ -138,25 +138,18 @@
         drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, {color: '#FFFFFF', lineWidth: 2});
         drawLandmarks(canvasCtx, landmarks, {color: '#FFD700', lineWidth: 1});
 
-        // Puntos clave para la lógica
         const munecaDer = landmarks[16];
         const munecaIzq = landmarks[15];
-        const hombroDer = landmarks[12];
-        const hombroIzq = landmarks[11];
 
-        // FASE DE ESTIMULO: Solo aquí medimos la reacción
+        // FASE DE ESTIMULO
         if (etapa === "ESTIMULO") {
           const tiempoTranscurrido = performance.now() - tiempoEstimulo;
 
-          // CÁLCULO DE EXTENSIÓN:
-          // Comparamos la profundidad de la muñeca contra el hombro.
-          // Un valor de 0.4 de diferencia suele indicar una extensión frontal casi completa (cerca de la cámara).
-          const extensionDer = hombroDer.z - munecaDer.z;
-          const extensionIzq = hombroIzq.z - munecaIzq.z;
-
-          // REGLA: Debe haber una extensión clara (brazo proyectado al frente)
-          // Ajusta el 0.45 si quieres que necesite acercarse aún más (0.50) o menos (0.40)
-          if ((extensionDer > 0.45 || extensionIzq > 0.45) && tiempoTranscurrido > 180) {
+          // UMBRAL DE SEGURIDAD ABSOLUTA
+          // -0.6 es un valor MUY cercano a la cámara. 
+          // Si el puño no llega casi a tocar la pantalla, no se activará.
+          // Además, ignoramos cualquier cosa que pase antes de 200ms para evitar falsos positivos por parpadeo.
+          if ((munecaDer.z < -0.6 || munecaIzq.z < -0.6) && tiempoTranscurrido > 200) {
             tiempoReaccion = tiempoTranscurrido;
             finalizarGolpe();
           }
@@ -164,7 +157,6 @@
       }
       canvasCtx.restore();
     });
-
     function lanzarEstimulo() {
       etapa = "ESTIMULO";
       tiempoEstimulo = performance.now();
