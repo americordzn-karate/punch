@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI v3.6 - Edición Definitiva</title>
+  <title>Senshi-React AI v4.0 - Biomecánica Avanzada</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -14,30 +14,23 @@
     body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     #top-controls { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
     .btn-row { display: flex; gap: 8px; }
-    
-    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; transition: 0.3s; }
-    
+    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; transition: 0.3s; text-transform: uppercase; }
     .selector-group { display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.8); padding: 4px; border-radius: 8px; border: 1px solid #444; }
     .opt-btn { padding: 6px 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 9px; font-weight: bold; cursor: pointer; text-align: center; }
     .opt-btn.active { background: #FFD700; color: #000; }
-
-    .config-box { background: rgba(0,0,0,0.85); padding: 10px; border-radius: 10px; border: 1px solid #FFD700; display: flex; justify-content: space-between; align-items: center; }
-    input[type="number"] { width: 50px; padding: 5px; border-radius: 4px; border: 1px solid #FFD700; background: #000; color: #FFD700; font-weight: bold; text-align: center; }
-
+    .config-box { background: rgba(0,0,0,0.85); padding: 8px; border-radius: 10px; border: 1px solid #FFD700; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; gap: 5px; }
+    .input-field { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: bold; color: #FFD700; }
+    input { width: 45px; padding: 4px; border-radius: 4px; border: 1px solid #FFD700; background: #000; color: #FFD700; text-align: center; }
     #main-view { position: relative; flex-grow: 1; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     #output_canvas { max-width: 100%; max-height: 100%; }
     .mirror { transform: scaleX(-1); }
-    
-    #debug-info { position: absolute; bottom: 85px; left: 15px; background: rgba(0,0,0,0.7); padding: 6px; border-radius: 5px; font-family: monospace; color: #0f0; border: 1px solid #333; font-size: 11px; z-index: 200; }
-    
-    button.action-btn { padding: 15px; font-size: 13px; font-weight: bold; border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer; flex: 1; box-shadow: 0 4px 0 #444; }
+    button.action-btn { padding: 15px; font-size: 13px; font-weight: bold; border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer; flex: 1; }
     .btn-camera { background: #FFD700; color: #000; }
     .btn-start { background: #fff; color: #000; display: none; }
-
-    #results-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; z-index: 500; overflow-y: auto; padding: 20px; box-sizing: border-box; border-top: 5px solid #FFD700; }
-    .chart-container { background: #111; border-radius: 10px; padding: 10px; margin: 15px 0; border: 1px solid #333; height: 220px; }
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-    .stat-card { background: #1a1a1a; padding: 8px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 11px; display: flex; justify-content: space-between; }
+    #results-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; z-index: 500; overflow-y: auto; padding: 15px; box-sizing: border-box; border-top: 5px solid #FFD700; }
+    .chart-container { background: #111; border-radius: 10px; padding: 10px; margin: 10px 0; border: 1px solid #333; height: 200px; }
+    .stat-grid { display: grid; grid-template-columns: 1fr; gap: 5px; margin-bottom: 20px; }
+    .stat-card { background: #1a1a1a; padding: 10px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 11px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; align-items: center; text-align: center; }
     #input_video { display: none; }
   </style>
 </head>
@@ -45,7 +38,7 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">SENSHI-KAN AI V3.6</div>
+        <div id="status-display">SENSHI-KAN V4.0</div>
         <div class="selector-group">
             <div id="btn-cam-front" class="opt-btn active" onclick="switchCam('user')">FRONT</div>
             <div id="btn-cam-back" class="opt-btn" onclick="switchCam('environment')">BACK</div>
@@ -56,26 +49,24 @@
         </div>
     </div>
     <div class="config-box">
-        <span style="font-size: 10px; font-weight:bold; color:#FFD700;">ANTEBRAZO(CM):</span>
-        <input type="number" id="antebrazo-cm" value="25">
-        <button id="btn-camera" class="action-btn btn-camera" style="max-width: 100px; padding: 8px; margin-left: 10px;" onclick="activarCamara()">1. CONECTAR</button>
+        <div class="input-field">BRAZO(CM): <input type="number" id="antebrazo-cm" value="25"></div>
+        <div class="input-field">PESO(KG): <input type="number" id="peso-kg" value="70"></div>
+        <button id="btn-camera" class="action-btn btn-camera" style="max-width: 90px; padding: 6px;" onclick="activarCamara()">1. CONECTAR</button>
     </div>
-    <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. INICIAR TEST (10 GOLPES)</button>
+    <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. COMENZAR EVALUACIÓN</button>
   </div>
   
   <div id="main-view">
     <video id="input_video" playsinline muted></video>
     <canvas id="output_canvas" class="mirror"></canvas>
-    <div id="debug-info">SISTEMA OFF</div>
     
     <div id="results-panel">
-      <h3 style="color:#FFD700; text-align:center; margin-bottom:5px; margin-top:0;">REPORTE DE ENTRENAMIENTO</h3>
-      <div id="res-promedios" style="text-align:center; font-size:14px; margin-bottom:10px;"></div>
-      
-      <div class="chart-container">
-        <canvas id="performanceChart"></canvas>
+      <h3 style="color:#FFD700; text-align:center; margin:0;">ANÁLISIS DE IMPACTO</h3>
+      <div id="res-promedios" style="text-align:center; font-size:12px; margin:10px 0; color:#ddd;"></div>
+      <div class="chart-container"><canvas id="performanceChart"></canvas></div>
+      <div style="font-size: 9px; color: #FFD700; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; text-align: center; margin-bottom: 5px; font-weight: bold;">
+          <span>ORDEN</span><span>TIEMPO</span><span>DIST.</span><span>VELOC.</span><span>POTENCIA</span>
       </div>
-
       <div id="stats-list" class="stat-grid"></div>
       <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%;">NUEVO TEST</button>
     </div>
@@ -86,7 +77,6 @@
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
     const statusText = document.getElementById('status-display');
-    const debugText = document.getElementById('debug-info');
 
     let modo = "OFF"; 
     let selectedArm = "R";
@@ -94,31 +84,22 @@
     let registros = [];
     let myChart = null;
     
-    // Variables de Biomecánica
-    let pxPorCm = 0;
-    let posInicialPuño = null;
-    let buscandoPico = false;
-    let picoMaximo = 0;
-    let t_inicio = 0;
-    let currentWrist = {x:0, y:0};
+    let pxPorCm = 0, posInicialPuño = null, buscandoPico = false, picoMaximo = 0, t_inicio = 0, currentWrist = {x:0, y:0};
 
-    // --- Audio Context ---
+    // --- SISTEMA DE AUDIO ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playBuzzer() {
+    function playAudio(freq, dur, type="sawtooth") {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = "sawtooth"; osc.frequency.value = 160;
+        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
         osc.connect(gain); gain.connect(audioCtx.destination);
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+        osc.start(); osc.stop(audioCtx.currentTime + dur);
     }
 
-    const pose = new Pose({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-    });
-
+    const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
     pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
     function switchCam(mode) {
@@ -135,57 +116,33 @@
       document.getElementById('btn-right').classList.toggle('active', side === 'R');
     }
 
-    function calcAng(p1, p2, p3) {
-      let angle = (Math.atan2(p3.y - p2.y, p3.x - p2.x) - Math.atan2(p1.y - p2.y, p1.x - p2.x)) * 180 / Math.PI;
-      angle = Math.abs(angle);
-      if (angle > 180) angle = 360 - angle;
-      return angle;
-    }
-
     pose.onResults((res) => {
       canvasElement.width = videoElement.videoWidth;
       canvasElement.height = videoElement.videoHeight;
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      
-      // Dibujar cámara
       canvasCtx.drawImage(res.image, 0, 0, canvasElement.width, canvasElement.height);
       
       if (res.poseLandmarks) {
         const lm = res.poseLandmarks;
         const p = (selectedArm === 'R') ? [12, 14, 16] : [11, 13, 15];
-        
-        const hombro = lm[p[0]];
-        const codo = lm[p[1]];
-        const muñeca = lm[p[2]];
+        const hombro = lm[p[0]], codo = lm[p[1]], muñeca = lm[p[2]];
         currentWrist = {x: muñeca.x, y: muñeca.y};
 
-        // Calibración de escala
-        const distPx = Math.hypot((muñeca.x - codo.x) * canvasElement.width, (muñeca.y - codo.y) * canvasElement.height);
-        const cmReal = parseFloat(document.getElementById('antebrazo-cm').value);
-        pxPorCm = distPx / cmReal;
+        pxPorCm = Math.hypot((muñeca.x - codo.x) * canvasElement.width, (muñeca.y - codo.y) * canvasElement.height) / parseFloat(document.getElementById('antebrazo-cm').value);
+        let ang = Math.abs((Math.atan2(muñeca.y - codo.y, muñeca.x - codo.x) - Math.atan2(hombro.y - codo.y, hombro.x - codo.x)) * 180 / Math.PI);
+        if (ang > 180) ang = 360 - ang;
 
-        const ang = calcAng(hombro, codo, muñeca);
-        
-        // --- DIBUJAR LÍNEAS Y NODOS (Restaurado) ---
-        const colorHilos = "#00FF00"; // Verde Neón
-        canvasCtx.lineWidth = 4;
-        canvasCtx.strokeStyle = "rgba(255,255,255,0.8)";
+        canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = "#00FF00";
         canvasCtx.beginPath();
         canvasCtx.moveTo(hombro.x * canvasElement.width, hombro.y * canvasElement.height);
         canvasCtx.lineTo(codo.x * canvasElement.width, codo.y * canvasElement.height);
         canvasCtx.lineTo(muñeca.x * canvasElement.width, muñeca.y * canvasElement.height);
         canvasCtx.stroke();
-
-        drawLandmarks(canvasCtx, [hombro, codo, muñeca], {color: colorHilos, lineWidth: 2});
-
-        debugText.innerText = `ÁNGULO: ${Math.round(ang)}° | ESCALA: ${pxPorCm.toFixed(1)} px/cm`;
+        drawLandmarks(canvasCtx, [hombro, codo, muñeca], {color: "#FFF", lineWidth: 2});
 
         if (modo === "ATAQUE") {
-          if (!buscandoPico && ang > 160) {
-            buscandoPico = true;
-            picoMaximo = ang;
-          }
+          if (!buscandoPico && ang > 160) { buscandoPico = true; picoMaximo = ang; }
           if (buscandoPico) {
             if (ang >= picoMaximo) picoMaximo = ang;
             else finalizarGolpe(picoMaximo, muñeca);
@@ -196,118 +153,81 @@
     });
 
     function finalizarGolpe(maxExt, posFinal) {
-      const t_final = performance.now();
-      const duracion = (t_final - t_inicio) / 1000;
+      const dur = (performance.now() - t_inicio) / 1000;
+      const dCm = Math.hypot((posFinal.x - posInicialPuño.x) * canvasElement.width, (posFinal.y - posInicialPuño.y) * canvasElement.height) / pxPorCm;
+      const vMs = (dCm / 100) / dur;
+      const vKmh = vMs * 3.6;
       
-      const distPx = Math.hypot((posFinal.x - posInicialPuño.x) * canvasElement.width, (posFinal.y - posInicialPuño.y) * canvasElement.height);
-      const desplCm = distPx / pxPorCm;
-      const velMs = (desplCm / 100) / duracion;
+      // Cálculo Potencia: Masa efectiva brazo (2.3% del peso)
+      const masaBrazo = parseFloat(document.getElementById('peso-kg').value) * 0.023;
+      const watts = (0.5 * masaBrazo * Math.pow(vMs, 2)) / dur;
 
-      buscandoPico = false;
-      modo = "PAUSA";
-      registros.push({ tiempo: duracion, extension: maxExt, distancia: desplCm, velocidad: velMs });
+      playAudio(880, 0.1, "sine"); // BEEP DE CONFIRMACIÓN (Agudo)
+      buscandoPico = false; modo = "PAUSA";
+      registros.push({ tiempo: dur, kmh: vKmh, vms: vMs, distancia: dCm, potencia: watts });
       
-      // SEMÁFORO (Restaurado con sus valores)
-      if (duracion < 0.75) {
-        statusText.style.background = "#28a745"; // Verde
-        statusText.style.color = "#fff";
-        statusText.innerText = `EXCELENTE: ${duracion.toFixed(3)}s`;
-      } else if (duracion <= 0.99) {
-        statusText.style.background = "#ffc107"; // Amarillo
-        statusText.style.color = "#000";
-        statusText.innerText = `BIEN: ${duracion.toFixed(3)}s`;
-      } else {
-        statusText.style.background = "#dc3545"; // Rojo
-        statusText.style.color = "#fff";
-        statusText.innerText = `LENTO: ${duracion.toFixed(3)}s`;
-      }
+      if (dur < 0.75) { statusText.style.background = "#28a745"; statusText.innerText = `EXCELENTE: ${dur.toFixed(2)}s`; }
+      else if (dur <= 0.99) { statusText.style.background = "#ffc107"; statusText.innerText = `BIEN: ${dur.toFixed(2)}s`; }
+      else { statusText.style.background = "#dc3545"; statusText.innerText = `LENTO: ${dur.toFixed(2)}s`; }
 
       if (registros.length < 10) setTimeout(esperaAleatoria, 2500);
-      else mostrarResultadosFinales();
+      else {
+          playAudio(120, 1.2, "sawtooth"); // BUZZ FINAL LARGO
+          mostrarResultadosFinales();
+      }
     }
 
     function mostrarResultadosFinales() {
       modo = "FIN";
       document.getElementById('results-panel').style.display = "block";
-      
-      const avgV = (registros.reduce((a, b) => a + b.velocidad, 0) / 10).toFixed(2);
-      const avgT = (registros.reduce((a, b) => a + b.tiempo, 0) / 10).toFixed(3);
-      document.getElementById('res-promedios').innerHTML = `<b>Promedio:</b> ${avgT}s | <b>Vel:</b> ${avgV} m/s`;
+      const avgK = (registros.reduce((a, b) => a + b.kmh, 0) / 10).toFixed(1);
+      const avgW = (registros.reduce((a, b) => a + b.potencia, 0) / 10).toFixed(0);
+      document.getElementById('res-promedios').innerHTML = `PROMEDIO: ${avgK} km/h | POTENCIA MEDIA: ${avgW} W`;
 
-      // --- GRÁFICA ---
       const ctx = document.getElementById('performanceChart').getContext('2d');
       if (myChart) myChart.destroy();
       myChart = new Chart(ctx, {
-        type: 'line',
+        type: 'bar',
         data: {
           labels: registros.map((_, i) => `G${i+1}`),
-          datasets: [{
-            label: 'Velocidad (m/s)',
-            data: registros.map(r => r.velocidad),
-            borderColor: '#FFD700',
-            backgroundColor: 'rgba(255,215,0,0.1)',
-            yAxisID: 'yVel',
-            tension: 0.3
-          }, {
-            label: 'Tiempo (s)',
-            data: registros.map(r => r.tiempo),
-            borderColor: '#fff',
-            borderDash: [5, 5],
-            yAxisID: 'yTime',
-            tension: 0.1
-          }]
+          datasets: [{ label: 'km/h', data: registros.map(r => r.kmh), backgroundColor: '#FFD700', yAxisID: 'yK' },
+                     { label: 'Watts', data: registros.map(r => r.potencia), type: 'line', borderColor: '#fff', yAxisID: 'yW' }]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            yVel: { position: 'left', title: { display: true, text: 'm/s', color:'#FFD700' } },
-            yTime: { position: 'right', title: { display: true, text: 'Seg' } }
-          }
-        }
+        options: { responsive: true, maintainAspectRatio: false, scales: { yK: { position: 'left' }, yW: { position: 'right', grid: { drawOnChartArea: false } } } }
       });
 
       let html = "";
       registros.forEach((r, i) => {
-        html += `<div class="stat-card"><span>#${i+1}</span> <b>${r.tiempo.toFixed(3)}s</b> <span style="color:#FFD700">${r.velocidad.toFixed(2)}m/s</span></div>`;
+        html += `<div class="stat-card">
+            <span>#${i+1}</span><span>${r.tiempo.toFixed(3)}s</span>
+            <span>${r.distancia.toFixed(0)}cm</span>
+            <span style="color:#FFD700">${r.kmh.toFixed(1)}k/h</span>
+            <span style="font-weight:bold; color:#0f0">${r.potencia.toFixed(0)}W</span>
+        </div>`;
       });
       document.getElementById('stats-list').innerHTML = html;
     }
 
     function esperaAleatoria() {
-      modo = "ESPERA";
-      statusText.innerText = "¡EN GUARDIA!";
-      statusText.style.background = "#1a1a1a";
-      statusText.style.color = "#fff";
+      modo = "ESPERA"; statusText.innerText = "¡EN GUARDIA!"; statusText.style.background = "#1a1a1a";
       setTimeout(() => {
         if(modo === "ESPERA") {
           posInicialPuño = { x: currentWrist.x, y: currentWrist.y }; 
-          modo = "ATAQUE";
-          t_inicio = performance.now();
-          playBuzzer(); // SONIDO RESTAURADO
-          statusText.innerText = "¡GOLPEA!"; 
-          statusText.style.background = "#f00";
+          modo = "ATAQUE"; t_inicio = performance.now();
+          playAudio(160, 0.4, "sawtooth"); // BUZZER INICIO
+          statusText.innerText = "¡GOLPEA!"; statusText.style.background = "#f00";
         }
       }, Math.random() * 3000 + 2000);
     }
 
     async function activarCamara() {
-      const camera = new Camera(videoElement, {
-        onFrame: async () => { await pose.send({image: videoElement}); },
-        facingMode: facingMode,
-        width: 640, height: 480
-      });
+      const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, facingMode: facingMode, width: 640, height: 480 });
       camera.start();
       document.getElementById('btn-camera').style.display = "none";
       document.getElementById('btn-start-serie').style.display = "block";
-      debugText.innerText = "CÁMARA OK";
     }
 
-    function iniciarSerie() {
-      registros = [];
-      document.getElementById('results-panel').style.display = "none";
-      esperaAleatoria();
-    }
+    function iniciarSerie() { registros = []; document.getElementById('results-panel').style.display = "none"; esperaAleatoria(); }
   </script>
 </body>
 </html>
