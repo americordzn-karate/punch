@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI v4.5 - Análisis de Élite</title>
+  <title>Senshi-React AI v4.6 - Kime Analytics</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -14,7 +14,7 @@
     body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     #top-controls { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
     .btn-row { display: flex; gap: 8px; }
-    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; text-transform: uppercase; transition: 0.3s; }
+    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; text-transform: uppercase; }
     .selector-group { display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.8); padding: 4px; border-radius: 8px; border: 1px solid #444; }
     .opt-btn { padding: 6px 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 9px; font-weight: bold; cursor: pointer; text-align: center; }
     .opt-btn.active { background: #FFD700; color: #000; }
@@ -30,7 +30,7 @@
     #results-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; z-index: 500; overflow-y: auto; padding: 15px; box-sizing: border-box; border-top: 5px solid #FFD700; }
     .chart-container { background: #111; border-radius: 10px; padding: 10px; margin: 10px 0; border: 1px solid #333; height: 230px; }
     .stat-grid { display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 20px; }
-    .stat-card { background: #1a1a1a; padding: 10px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 10px; display: grid; grid-template-columns: 0.5fr 1fr 1fr 1fr 1.2fr; align-items: center; text-align: center; }
+    .stat-card { background: #1a1a1a; padding: 10px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 10px; display: grid; grid-template-columns: 0.5fr 1fr 1fr 1.2fr 1fr; align-items: center; text-align: center; }
     .best-hit { background: #064e3b !important; border-left: 4px solid #10b981 !important; }
     .worst-hit { background: #7f1d1d !important; border-left: 4px solid #ef4444 !important; }
     #input_video { display: none; }
@@ -40,7 +40,7 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">SENSHI-KAN V4.5</div>
+        <div id="status-display">SENSHI-KAN V4.6</div>
         <div class="selector-group">
             <div id="btn-cam-front" class="opt-btn active" onclick="switchCam('user')">FRONT</div>
             <div id="btn-cam-back" class="opt-btn" onclick="switchCam('environment')">BACK</div>
@@ -52,7 +52,7 @@
     </div>
     <div class="config-box">
         <div class="input-field">BRAZO(CM): <input type="number" id="antebrazo-cm" value="25"></div>
-        <div class="input-field">PESO(KG): <input type="number" id="peso-kg" value="70"></div>
+        <div class="input-field">PESO(KG): <input type="number" id="peso-kg" value="86"></div>
         <button id="btn-camera" class="action-btn btn-camera" style="max-width: 90px; padding: 6px;" onclick="activarCamara()">1. CONECTAR</button>
     </div>
     <button id="btn-start-serie" class="action-btn btn-start" onclick="prepararAtleta()">2. INICIAR EVALUACIÓN</button>
@@ -66,7 +66,7 @@
       <h3 style="color:#FFD700; text-align:center; margin:0;">REPORTE DE RENDIMIENTO</h3>
       <div id="res-promedios" style="text-align:center; font-size:11px; margin:8px 0; color:#ddd;"></div>
       <div class="chart-container"><canvas id="performanceChart"></canvas></div>
-      <div style="font-size: 8px; color: #FFD700; display: grid; grid-template-columns: 0.5fr 1fr 1fr 1fr 1.2fr; text-align: center; margin-bottom: 5px; font-weight: bold; text-transform: uppercase;">
+      <div style="font-size: 8px; color: #FFD700; display: grid; grid-template-columns: 0.5fr 1fr 1fr 1.2fr 1fr; text-align: center; margin-bottom: 5px; font-weight: bold; text-transform: uppercase;">
           <span>#</span><span>TIEMPO</span><span>DIST.</span><span>VELOCIDAD</span><span>FUERZA</span>
       </div>
       <div id="stats-list" class="stat-grid"></div>
@@ -83,7 +83,6 @@
     let modo = "OFF", selectedArm = "R", facingMode = "user", registros = [], myChart = null;
     let pxPorCm = 0, posInicialPuño = null, buscandoPico = false, picoMaximo = 0, t_inicio = 0, currentWrist = {x:0, y:0};
 
-    // --- AUDIO POTENCIADO (VOLUMEN X2) ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playAudio(freq, dur, type="sawtooth") {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -91,7 +90,7 @@
         const gain = audioCtx.createGain();
         osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
         osc.connect(gain); gain.connect(audioCtx.destination);
-        gain.gain.setValueAtTime(0.7, audioCtx.currentTime); // VOLUMEN AUMENTADO
+        gain.gain.setValueAtTime(0.7, audioCtx.currentTime); 
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
         osc.start(); osc.stop(audioCtx.currentTime + dur);
     }
@@ -154,10 +153,15 @@
       const dCm = Math.hypot((posFinal.x - posInicialPuño.x) * canvasElement.width, (posFinal.y - posInicialPuño.y) * canvasElement.height) / pxPorCm;
       const vMs = (dCm / 100) / dur;
       const vKmh = vMs * 3.6;
-      const masaBrazo = parseFloat(document.getElementById('peso-kg').value) * 0.023;
-      const fuerzaKg = (masaBrazo * (vMs / dur)) / 9.81;
+      
+      // --- FÍSICA CORREGIDA (Teoría del Impulso) ---
+      const masaCuerpo = parseFloat(document.getElementById('peso-kg').value);
+      const masaEfectiva = masaCuerpo * 0.06; // Incrementado al 6% considerando torque de hombro/cadera
+      const tiempoChoque = 0.08; // 80ms de tiempo de impacto estimado para Karate
+      const fuerzaNewtons = (masaEfectiva * vMs) / tiempoChoque;
+      const fuerzaKg = fuerzaNewtons / 9.81;
 
-      playAudio(1000, 0.15, "sine"); // BEEP CONFIRMACIÓN X2
+      playAudio(1000, 0.15, "sine"); 
       buscandoPico = false; modo = "PAUSA";
       registros.push({ tiempo: dur, kmh: vKmh, distancia: dCm, fuerza: fuerzaKg });
       
@@ -167,7 +171,7 @@
 
       if (registros.length < 10) setTimeout(esperaAleatoria, 2500);
       else {
-          playAudio(150, 1.2, "sawtooth"); // BUZZ FINAL X2
+          playAudio(150, 1.2, "sawtooth"); 
           mostrarResultadosFinales();
       }
     }
@@ -176,18 +180,18 @@
       modo = "FIN";
       document.getElementById('results-panel').style.display = "block";
       
-      // Identificar Mejor y Peor (Lógica combinada: Menor tiempo + Mayor velocidad)
       let bestIdx = 0, worstIdx = 0;
       let minScore = Infinity, maxScore = -Infinity;
 
       registros.forEach((r, i) => {
-          let score = r.tiempo / r.kmh; // Un score bajo es mejor
+          let score = r.tiempo / (r.kmh + 0.1); 
           if(score < minScore) { minScore = score; bestIdx = i; }
           if(score > maxScore) { maxScore = score; worstIdx = i; }
       });
 
       const avgK = (registros.reduce((a, b) => a + b.kmh, 0) / 10).toFixed(1);
-      document.getElementById('res-promedios').innerHTML = `PROMEDIO DE SERIE: ${avgK} km/h`;
+      const avgF = (registros.reduce((a, b) => a + b.fuerza, 0) / 10).toFixed(1);
+      document.getElementById('res-promedios').innerHTML = `PROMEDIO: ${avgK} km/h | IMPACTO MEDIO: ${avgF} kg-f`;
 
       const ctx = document.getElementById('performanceChart').getContext('2d');
       if (myChart) myChart.destroy();
@@ -217,7 +221,7 @@
             <span>${i+1}</span><span>${r.tiempo.toFixed(3)}s</span>
             <span>${r.distancia.toFixed(0)}cm</span>
             <span style="color:#FFD700">${r.kmh.toFixed(1)} km/h</span>
-            <span style="font-weight:bold; color:#0f0">${r.fuerza.toFixed(1)}kg</span>
+            <span style="font-weight:bold; color:#0f0">${r.fuerza.toFixed(1)} kg</span>
         </div>`;
       });
       document.getElementById('stats-list').innerHTML = html;
@@ -245,7 +249,7 @@
         if(modo === "ESPERA") {
           posInicialPuño = { x: currentWrist.x, y: currentWrist.y }; 
           modo = "ATAQUE"; t_inicio = performance.now();
-          playAudio(160, 0.4, "sawtooth"); // BUZZER INICIO
+          playAudio(160, 0.4, "sawtooth"); 
           statusText.innerText = "¡GOLPEA!"; statusText.style.background = "#f00";
         }
       }, Math.random() * 3000 + 2000);
