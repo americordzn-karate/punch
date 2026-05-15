@@ -2,106 +2,147 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <!-- Forzamos la política de permisos para el iframe de Google Sites -->
-  <meta http-equiv="Permissions-Policy" content="camera=self">
+  <title>Senshi-React AI</title>
   
+  <!-- LIBRERÍAS DE IA -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
 
   <style>
-    body { margin: 0; background: #000; color: white; font-family: sans-serif; text-align: center; }
-    #container { position: relative; width: 100vw; height: 70vh; background: #111; overflow: hidden; }
+    body { margin: 0; background: #000; color: white; font-family: 'Arial', sans-serif; text-align: center; }
+    #status { padding: 20px; background: #222; font-size: 24px; font-weight: bold; border-bottom: 3px solid #FFD700; min-height: 40px; }
+    #container { position: relative; width: 100vw; height: 60vh; background: #111; }
     #input_video { position: absolute; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0; }
     #output_canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-    #status { padding: 15px; background: #222; font-size: 14px; border-bottom: 2px solid #FFD700; }
-    #btn_start { 
-      padding: 15px 30px; font-size: 18px; background: #FFD700; color: black; 
-      border: none; border-radius: 5px; cursor: pointer; margin: 20px; font-weight: bold;
-    }
-    .instrucciones { font-size: 12px; color: #aaa; padding: 10px; }
+    
+    /* BOTONES */
+    .controls { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+    #btn_start { padding: 15px; font-size: 18px; background: #FFD700; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    #btn_entrenar { padding: 15px; font-size: 18px; background: #ffffff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: none; }
   </style>
 </head>
 <body>
 
-  <div id="status">ESTADO: ESPERANDO ACTIVACIÓN</div>
+  <!-- 1. BARRA DE ESTADO (Aquí verás los mensajes y el tiempo) -->
+  <div id="status">SISTEMA LISTO</div>
   
-  <button id="btn_start">1. ACTIVAR SENSORES</button>
-  
-  <div class="instrucciones">
-    Si al presionar no sucede nada, asegúrate de dar "Permitir" en la ventana emergente del navegador.
-  </div>
-
+  <!-- 2. VISOR DE CÁMARA E IA -->
   <div id="container">
     <video id="input_video" playsinline muted></video>
     <canvas id="output_canvas"></canvas>
   </div>
 
+  <!-- 3. CONTROLES -->
+  <div class="controls">
+    <button id="btn_start">1. ACTIVAR CÁMARA</button>
+    <button id="btn_entrenar">2. INICIAR REACCIÓN</button>
+  </div>
+
   <script>
+    // --- VARIABLES GLOBALES ---
     const videoElement = document.getElementById('input_video');
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
     const statusDiv = document.getElementById('status');
     const btnStart = document.getElementById('btn_start');
+    const btnEntrenar = document.getElementById('btn_entrenar');
 
-    // Configuración de Pose
+    let etapa = "ESPERANDO"; 
+    let tiempoEstimulo = 0;
+    let tiempoReaccion = 0;
+
+    // --- CONFIGURACIÓN DE LA IA (POSE) ---
     const pose = new Pose({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
     });
-    pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
+    pose.setOptions({
+      modelComplexity: 1,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    // --- LÓGICA DE DETECCIÓN Y DIBUJO ---
     pose.onResults((results) => {
       canvasElement.width = videoElement.videoWidth;
       canvasElement.height = videoElement.videoHeight;
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      
-      // Dibujamos la imagen de la cámara en el lienzo
       canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
       
       if (results.poseLandmarks) {
-        statusDiv.innerText = "SISTEMA OK: ATLETA EN CUADRO";
-        statusDiv.style.color = "#00FF00";
-        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#FFFFFF', lineWidth: 2});
-        drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#FFD700', lineWidth: 1});
-      } else {
-        statusDiv.innerText = "ADVERTENCIA: BUSCANDO ATLETA...";
-        statusDiv.style.color = "#FFD700";
+        const landmarks = results.poseLandmarks;
+        
+        // Dibujamos el esqueleto
+        drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, {color: '#FFFFFF', lineWidth: 2});
+        drawLandmarks(canvasCtx, landmarks, {color: '#FFD700', lineWidth: 1});
+
+        // REGLA DE DETECCIÓN: Si estamos en etapa de ESTIMULO
+        if (etapa === "ESTIMULO") {
+          const munecaDer = landmarks[16]; 
+          const munecaIzq = landmarks[15];
+
+          // Si cualquiera de las dos muñecas se acerca mucho a la cámara (valor Z bajo)
+          if (munecaDer.z < -0.15 || munecaIzq.z < -0.15) {
+            tiempoReaccion = performance.now() - tiempoEstimulo;
+            finalizarGolpe();
+          }
+        }
       }
       canvasCtx.restore();
     });
 
-    async function startApp() {
-      statusDiv.innerText = "INICIANDO CÁMARA...";
-      
-      try {
-        // Solicitud explícita de stream antes de iniciar MediaPipe Camera
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "user" }, 
-          audio: false 
-        });
-        videoElement.srcObject = stream;
-        videoElement.play();
+    // --- FUNCIONES DE ENTRENAMIENTO ---
 
-        const camera = new Camera(videoElement, {
-          onFrame: async () => { await pose.send({image: videoElement}); },
-          width: 640, height: 480
-        });
-        
-        await camera.start();
-        btnStart.style.display = "none";
-        statusDiv.innerText = "SISTEMA LISTO";
-
-      } catch (err) {
-        console.error("Error detallado:", err);
-        statusDiv.innerText = "ERROR: " + err.name + ". Revisa permisos de cámara en tu navegador.";
-        statusDiv.style.color = "#FF4444";
-      }
+    function lanzarEstimulo() {
+      etapa = "ESTIMULO";
+      tiempoEstimulo = performance.now();
+      statusDiv.innerText = "¡GOLPEA!";
+      statusDiv.style.background = "#FF0000"; // ROJO: Señal de ataque
+      statusDiv.style.color = "white";
     }
 
-    btnStart.onclick = () => {
-      startApp();
+    function finalizarGolpe() {
+      etapa = "GOLPE";
+      const segs = (tiempoReaccion / 1000).toFixed(3);
+      statusDiv.innerText = `REACCIÓN: ${segs}s`;
+      statusDiv.style.background = "#FFD700"; // MOSTAZA: Éxito
+      statusDiv.style.color = "black";
+    }
+
+    function prepararSiguiente() {
+      etapa = "ESPERANDO";
+      statusDiv.innerText = "¡EN GUARDIA!";
+      statusDiv.style.background = "#222";
+      statusDiv.style.color = "white";
+      
+      // Espera aleatoria entre 2 y 4 segundos para el siguiente estímulo
+      const espera = Math.floor(Math.random() * 2000) + 2000;
+      setTimeout(() => {
+        if(etapa === "ESPERANDO") lanzarEstimulo();
+      }, espera);
+    }
+
+    // --- EVENTOS DE BOTONES ---
+
+    btnStart.onclick = async () => {
+      statusDiv.innerText = "INICIANDO...";
+      const camera = new Camera(videoElement, {
+        onFrame: async () => { await pose.send({image: videoElement}); },
+        width: 640, height: 480
+      });
+      camera.start().then(() => {
+        btnStart.style.display = "none";
+        btnEntrenar.style.display = "block";
+        statusDiv.innerText = "CÁMARA OK";
+      });
     };
+
+    btnEntrenar.onclick = () => {
+      prepararSiguiente();
+    };
+
   </script>
 </body>
 </html>
