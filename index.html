@@ -84,7 +84,7 @@
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = "sawtooth";
-        osc.frequency.value = 140;
+        osc.frequency.value = 190;
         osc.connect(gain); gain.connect(audioCtx.destination);
         gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
@@ -168,10 +168,10 @@
       registros.push({ tiempo: duracion, extension: maxExt });
       
       // Feedback semáforo
-      if (duracion < 0.50) {
+      if (duracion < 0.65) {
         statusText.style.background = "#28a745";
         statusText.innerText = `EXCELENTE! ${duracion.toFixed(3)}s`;
-      } else if (duracion <= 0.70) {
+      } else if (duracion <= 0.95) {
         statusText.style.background = "#ffc107"; statusText.style.color = "#000";
         statusText.innerText = `BIEN: ${duracion.toFixed(3)}s`;
       } else {
@@ -180,7 +180,7 @@
       }
 
       counterText.innerText = `PROGRESO: ${registros.length} / 10`;
-      if (registros.length < 10) setTimeout(esperaAleatoria, 2500);
+      if (registros.length < 10) setTimeout(esperaAleatoria, 3500);
       else mostrarReporte();
     }
 
