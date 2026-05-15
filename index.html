@@ -3,110 +3,72 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI - Modo Entrenamiento</title>
+  <title>Senshi-React AI v2.1 - Calibración Sensible</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
 
   <style>
-    :root { --primary: #FFD700; --bg: #000; }
-    body { 
-      margin: 0; background: var(--bg); color: white; 
-      font-family: 'Segoe UI', Roboto, sans-serif;
-      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-    }
-
-    /* Encabezado con Status y Logo */
-    header {
-      display: flex; justify-content: center; align-items: center;
-      padding: 15px; background: #111; border-bottom: 3px solid var(--primary);
-      position: relative; min-height: 60px;
-    }
-    #status { font-size: 20px; font-weight: bold; text-transform: uppercase; text-align: center; }
-    
-    #logo_academia {
-      position: absolute; right: 10px; top: 10px;
-      width: 50px; height: 50px;
-      object-fit: contain;
-      border-radius: 5px;
-      /* Si tienes la URL de tu logo, ponla aquí abajo en src */
-      background: rgba(255,255,255,0.1); 
-    }
-
-    /* Contenedor de Video */
-    #container { 
-      position: relative; flex: 1; background: #000;
-      display: flex; justify-content: center; align-items: center;
-    }
+    body { margin: 0; background: #000; color: white; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    #header-app { padding: 10px; background: #1a1a1a; border-bottom: 3px solid #FFD700; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+    #status-display { font-size: 18px; font-weight: bold; flex-grow: 1; text-align: center; border-radius: 5px; padding: 5px; }
+    #logo-placeholder { width: 50px; height: 50px; background: #333; border-radius: 5px; overflow: hidden; }
+    #main-view { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #050505; }
     #input_video { display: none; }
-    #output_canvas { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
-
-    /* Resultados Overlay */
-    #stats_overlay {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.9); border: 2px solid var(--primary);
-      padding: 20px; border-radius: 15px; display: none; text-align: center;
-      width: 80%; z-index: 10;
-    }
-    .stat-row { font-size: 18px; margin: 10px 0; display: flex; justify-content: space-between; }
-    .stat-val { color: var(--primary); font-weight: bold; }
-
-    /* Botonera Inferior */
-    .controls { 
-      padding: 15px; background: #111; border-top: 1px solid #333;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    button { 
-      width: 100%; padding: 16px; font-size: 16px; font-weight: bold; 
-      border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer;
-    }
-    #btn_start { background: var(--primary); color: #000; }
-    #btn_reset { background: #444; color: #fff; display: none; }
-    #contador_series { text-align: center; font-size: 14px; color: #aaa; }
+    #output_canvas { max-width: 100%; max-height: 100%; transform: scaleX(-1); }
+    #results-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 3px solid #FFD700; border-radius: 15px; padding: 25px; display: none; z-index: 200; width: 85%; text-align: center; }
+    #footer-controls { padding: 15px; background: #1a1a1a; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
+    button { padding: 18px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; text-transform: uppercase; cursor: pointer; }
+    .btn-main { background: #FFD700; color: #000; }
+    .btn-action { background: #fff; color: #000; display: none; }
+    #series-counter { text-align: center; color: #888; font-size: 14px; }
+    .result-line { display: flex; justify-content: space-between; margin: 10px 0; font-size: 1.2em; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    .gold { color: #FFD700; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <header>
-    <div id="status">CONECTE CÁMARA</div>
-    <!-- Reemplaza la URL del logo en 'src' cuando la tengas -->
-    <img id="logo_academia" src="https://via.placeholder.com/100?text=LOGO" alt="Logo">
-  </header>
+  <div id="header-app">
+    <div id="status-display">ESPERANDO CÁMARA</div>
+    <div id="logo-placeholder">
+      <img src="https://via.placeholder.com/100/FFD700/000000?text=SK" alt="Logo">
+    </div>
+  </div>
   
-  <div id="container">
+  <div id="main-view">
     <video id="input_video" playsinline muted></video>
     <canvas id="output_canvas"></canvas>
     
-    <div id="stats_overlay">
-      <h2 style="color:var(--primary); margin-top:0;">RESULTADOS SERIE</h2>
-      <div class="stat-row"><span>MÁS RÁPIDO:</span> <span id="res_min" class="stat-val">-</span></div>
-      <div class="stat-row"><span>MÁS LENTO:</span> <span id="res_max" class="stat-val">-</span></div>
-      <div class="stat-row"><span>PROMEDIO:</span> <span id="res_avg" class="stat-val">-</span></div>
-      <button onclick="reiniciarSerie()" style="background:var(--primary); color:#000; margin-top:15px;">VOLVER A MEDIR</button>
+    <div id="results-panel">
+      <h2 style="color:#FFD700; margin-bottom:20px;">RESULTADOS SERIE</h2>
+      <div class="result-line"><span>MÍNIMO:</span> <span id="val-min" class="gold">-</span></div>
+      <div class="result-line"><span>MÁXIMO:</span> <span id="val-max" class="gold">-</span></div>
+      <div class="result-line"><span>PROMEDIO:</span> <span id="val-avg" class="gold">-</span></div>
+      <button class="btn-main" onclick="startNewSerie()" style="margin-top:20px; width:100%;">NUEVA SERIE</button>
     </div>
   </div>
 
-  <div class="controls">
-    <div id="contador_series">GOLPES: 0 / 10</div>
-    <button id="btn_start">1. ACTIVAR CÁMARA</button>
-    <button id="btn_reset">INICIAR SERIE (10 GOLPES)</button>
+  <div id="footer-controls">
+    <div id="series-counter">GOLPES: 0 / 10</div>
+    <button id="btn-camera" class="btn-main">1. ENCENDER CÁMARA</button>
+    <button id="btn-start-serie" class="btn-action">2. INICIAR 10 GOLPES</button>
   </div>
 
   <script>
     const videoElement = document.getElementById('input_video');
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
-    const statusDiv = document.getElementById('status');
-    const btnStart = document.getElementById('btn_start');
-    const btnReset = document.getElementById('btn_reset');
-    const statsOverlay = document.getElementById('stats_overlay');
-    const contadorDiv = document.getElementById('contador_series');
+    const statusText = document.getElementById('status-display');
+    const btnCamera = document.getElementById('btn-camera');
+    const btnSerie = document.getElementById('btn-start-serie');
+    const counterText = document.getElementById('series-counter');
+    const resultsPanel = document.getElementById('results-panel');
 
-    let etapa = "ESPERANDO"; 
-    let tiempoEstimulo = 0;
-    let intentos = [];
-    const MAX_INTENTOS = 10;
+    let currentPhase = "OFF";
+    let startTime = 0;
+    let scores = [];
+    const LIMIT = 10;
 
     const pose = new Pose({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
@@ -114,105 +76,123 @@
 
     pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
-    function calcularAngulo(A, B, C) {
-      let AB = { x: B.x - A.x, y: B.y - A.y, z: B.z - A.z };
-      let BC = { x: C.x - B.x, y: C.y - B.y, z: C.z - B.z };
-      let dotProduct = AB.x * BC.x + AB.y * BC.y + AB.z * BC.z;
-      let magnitudeAB = Math.sqrt(AB.x**2 + AB.y**2 + AB.z**2);
-      let magnitudeBC = Math.sqrt(BC.x**2 + BC.y**2 + BC.z**2);
-      let angle = Math.acos(dotProduct / (magnitudeAB * magnitudeBC));
-      return (angle * 180) / Math.PI;
+    function getAngle(p1, p2, p3) {
+      if(!p1 || !p2 || !p3) return 0;
+      const v1 = { x: p2.x - p1.x, y: p2.y - p1.y, z: p2.z - p1.z };
+      const v2 = { x: p3.x - p2.x, y: p3.y - p2.y, z: p3.z - p2.z };
+      const dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+      const m1 = Math.sqrt(v1.x**2 + v1.y**2 + v1.z**2);
+      const m2 = Math.sqrt(v2.x**2 + v2.y**2 + v2.z**2);
+      const val = dot / (m1 * m2);
+      return (Math.acos(Math.min(Math.max(val, -1), 1)) * 180) / Math.PI;
     }
 
-    pose.onResults((results) => {
+    pose.onResults((res) => {
       canvasElement.width = videoElement.videoWidth;
       canvasElement.height = videoElement.videoHeight;
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.drawImage(res.image, 0, 0, canvasElement.width, canvasElement.height);
       
-      if (results.poseLandmarks) {
-        const landmarks = results.poseLandmarks;
-        drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, {color: '#FFFFFF', lineWidth: 2});
-        drawLandmarks(canvasCtx, landmarks, {color: '#FFD700', lineWidth: 1});
+      if (res.poseLandmarks) {
+        drawConnectors(canvasCtx, res.poseLandmarks, POSE_CONNECTIONS, {color: '#FFF', lineWidth: 2});
+        drawLandmarks(canvasCtx, res.poseLandmarks, {color: '#FFD700', lineWidth: 1});
 
-        if (etapa === "ESTIMULO") {
-          const ahora = performance.now();
-          const tiempoActual = ahora - tiempoEstimulo;
-          const aDer = calcularAngulo(landmarks[12], landmarks[14], landmarks[16]);
-          const aIzq = calcularAngulo(landmarks[11], landmarks[13], landmarks[15]);
+        if (currentPhase === "ACTIVE") {
+          const now = performance.now();
+          const elapsed = now - startTime;
+          
+          // Calculamos ángulos de ambos brazos
+          const angR = getAngle(res.poseLandmarks[12], res.poseLandmarks[14], res.poseLandmarks[16]);
+          const angL = getAngle(res.poseLandmarks[11], res.poseLandmarks[13], res.poseLandmarks[15]);
 
-          if ((aDer > 170 || aIzq > 170) && tiempoActual > 150) {
-            finalizarGolpe(tiempoActual);
+          // SENSIBILIDAD AJUSTADA A 155 GRADOS PARA CÁMARA FRONTAL
+          if ((angR > 155 || angL > 155) && elapsed > 100) {
+            recordHit(elapsed);
           }
         }
       }
       canvasCtx.restore();
     });
 
-    function finalizarGolpe(tiempo) {
-      etapa = "GOLPE_FINALIZADO";
-      intentos.push(tiempo / 1000);
-      contadorDiv.innerText = `GOLPES: ${intentos.length} / ${MAX_INTENTOS}`;
-      statusDiv.innerText = `¡GOLPE! ${ (tiempo/1000).toFixed(3) }s`;
-      statusDiv.style.background = "#FFD700"; statusDiv.style.color = "#000";
+    function recordHit(timeMs) {
+      currentPhase = "COOLDOWN";
+      const resultSecs = timeMs / 1000;
+      scores.push(resultSecs);
+      
+      statusText.innerText = `¡GOLPE! ${resultSecs.toFixed(3)}s`;
+      statusText.style.background = "#FFD700";
+      statusText.style.color = "#000";
+      counterText.innerText = `GOLPES: ${scores.length} / ${LIMIT}`;
 
-      if (intentos.length < MAX_INTENTOS) {
-        setTimeout(prepararSiguiente, 2000); // Espera 2 segs antes del siguiente "En Guardia"
+      if (scores.length < LIMIT) {
+        setTimeout(nextReady, 2000);
       } else {
-        mostrarResultados();
+        showFinalStats();
       }
     }
 
-    function mostrarResultados() {
-      etapa = "FINALIZADO";
-      const min = Math.min(...intentos).toFixed(3);
-      const max = Math.max(...intentos).toFixed(3);
-      const avg = (intentos.reduce((a, b) => a + b, 0) / intentos.length).toFixed(3);
+    function showFinalStats() {
+      currentPhase = "END";
+      const min = Math.min(...scores).toFixed(3);
+      const max = Math.max(...scores).toFixed(3);
+      const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(3);
 
-      document.getElementById('res_min').innerText = min + "s";
-      document.getElementById('res_max').innerText = max + "s";
-      document.getElementById('res_avg').innerText = avg + "s";
-      statsOverlay.style.display = "block";
-      statusDiv.innerText = "SERIE COMPLETADA";
+      document.getElementById('val-min').innerText = min + "s";
+      document.getElementById('val-max').innerText = max + "s";
+      document.getElementById('val-avg').innerText = avg + "s";
+      
+      resultsPanel.style.display = "block";
+      statusText.innerText = "SERIE FINALIZADA";
+      statusText.style.background = "#1a1a1a";
+      statusText.style.color = "#fff";
     }
 
-    function reiniciarSerie() {
-      intentos = [];
-      statsOverlay.style.display = "none";
-      contadorDiv.innerText = `GOLPES: 0 / ${MAX_INTENTOS}`;
-      prepararSiguiente();
+    function nextReady() {
+      currentPhase = "WAITING";
+      statusText.innerText = "¡EN GUARDIA!";
+      statusText.style.background = "#333";
+      statusText.style.color = "#fff";
+      
+      const randomWait = Math.floor(Math.random() * 3000) + 2000;
+      setTimeout(() => {
+        if(currentPhase === "WAITING") triggerFire();
+      }, randomWait);
     }
 
-    function lanzarEstimulo() {
-      etapa = "ESTIMULO";
-      tiempoEstimulo = performance.now();
-      statusDiv.innerText = "¡GOLPEA YA!";
-      statusDiv.style.background = "#FF0000"; statusDiv.style.color = "white";
+    function triggerFire() {
+      currentPhase = "ACTIVE";
+      startTime = performance.now();
+      statusText.innerText = "¡GOLPEA YA!";
+      statusText.style.background = "#f00";
+      statusText.style.color = "#fff";
     }
 
-    function prepararSiguiente() {
-      etapa = "PREPARANDO";
-      statusDiv.innerText = "¡EN GUARDIA!";
-      statusDiv.style.background = "#222"; statusDiv.style.color = "white";
-      const espera = Math.floor(Math.random() * 3000) + 2000;
-      setTimeout(() => { if(etapa === "PREPARANDO") lanzarEstimulo(); }, espera);
+    function startNewSerie() {
+      scores = [];
+      resultsPanel.style.display = "none";
+      counterText.innerText = `GOLPES: 0 / ${LIMIT}`;
+      nextReady();
     }
 
-    btnStart.addEventListener('click', async () => {
-      statusDiv.innerText = "INICIANDO IA...";
-      const camera = new Camera(videoElement, {
-        onFrame: async () => { await pose.send({image: videoElement}); },
-        width: 640, height: 480
-      });
-      await camera.start();
-      btnStart.style.display = "none";
-      btnReset.style.display = "block";
-      statusDiv.innerText = "SISTEMA LISTO";
+    btnCamera.addEventListener('click', async () => {
+      statusText.innerText = "CONECTANDO...";
+      try {
+        const camera = new Camera(videoElement, {
+          onFrame: async () => { await pose.send({image: videoElement}); },
+          width: 640, height: 480
+        });
+        await camera.start();
+        btnCamera.style.display = "none";
+        btnSerie.style.display = "block";
+        statusText.innerText = "CÁMARA LISTA";
+      } catch(e) {
+        statusText.innerText = "ERROR CÁMARA";
+      }
     });
 
-    btnReset.addEventListener('click', () => {
-      reiniciarSerie();
+    btnSerie.addEventListener('click', () => {
+      startNewSerie();
     });
   </script>
 </body>
