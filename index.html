@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI v2.5 - Audio & Lateral</title>
+  <title>Senshi-React AI v2.6 - Buzzer & Semáforo</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -12,15 +12,16 @@
   <style>
     body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     
-    /* Botones Superpuestos */
     #top-controls {
       position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 10px;
     }
     .btn-row { display: flex; gap: 10px; }
     
+    /* El recuadro dinámico */
     #status-display { 
-      background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border-left: 5px solid #FFD700;
-      font-size: 20px; font-weight: bold; text-align: center; flex-grow: 1;
+      background: rgba(40,40,40,0.9); padding: 15px; border-radius: 10px; border: 3px solid #FFD700;
+      font-size: 22px; font-weight: bold; text-align: center; flex-grow: 1; transition: all 0.2s ease;
+      color: #fff; text-shadow: 1px 1px 2px #000;
     }
 
     #main-view { position: relative; flex-grow: 1; background: #000; display: flex; align-items: center; justify-content: center; }
@@ -28,10 +29,10 @@
     
     #debug-info { 
       position: absolute; bottom: 100px; left: 20px; background: rgba(0,0,0,0.7); 
-      padding: 10px; border-radius: 5px; font-family: monospace; color: #0f0; border: 1px solid #333;
+      padding: 10px; border-radius: 5px; font-family: monospace; color: #0f0; border: 1px solid #333; font-size: 14px;
     }
 
-    #arm-selector { display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 8px; }
+    #arm-selector { display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 8px; border: 1px solid #444; }
     .arm-btn {
       padding: 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;
     }
@@ -39,9 +40,10 @@
 
     button.action-btn { 
       padding: 15px; font-size: 14px; font-weight: bold; border: none; border-radius: 8px; 
-      text-transform: uppercase; cursor: pointer; flex: 1;
+      text-transform: uppercase; cursor: pointer; flex: 1; box-shadow: 0 4px 0 #999;
     }
-    .btn-camera { background: #FFD700; color: #000; }
+    button.action-btn:active { transform: translateY(3px); box-shadow: none; }
+    .btn-camera { background: #FFD700; color: #000; box-shadow: 0 4px 0 #b39700; }
     .btn-start { background: #fff; color: #000; display: none; }
 
     #results-panel { 
@@ -49,7 +51,7 @@
       background: rgba(0,0,0,0.95); border: 3px solid #FFD700; border-radius: 15px; 
       padding: 30px; display: none; z-index: 400; width: 85%; text-align: center; 
     }
-    #series-counter { position: absolute; bottom: 30px; width: 100%; text-align: center; font-weight: bold; color: #FFD700; text-shadow: 2px 2px 4px #000; }
+    #series-counter { position: absolute; bottom: 30px; width: 100%; text-align: center; font-weight: bold; color: #FFD700; font-size: 18px; }
     #input_video { display: none; }
   </style>
 </head>
@@ -57,31 +59,31 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">SISTEMA LISTO</div>
+        <div id="status-display">SISTEMA INICIALIZADO</div>
         <div id="arm-selector">
             <div id="btn-left" class="arm-btn" onclick="selectArm('L')">IZQ</div>
             <div id="btn-right" class="arm-btn active" onclick="selectArm('R')">DER</div>
         </div>
     </div>
     <div class="btn-row">
-        <button id="btn-camera" class="action-btn btn-camera" onclick="activarCamara()">1. CONECTAR CÁMARA</button>
-        <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. INICIAR 10 GOLPES</button>
+        <button id="btn-camera" class="action-btn btn-camera" onclick="activarCamara()">1. ENCENDER CÁMARA</button>
+        <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. INICIAR SERIE (10)</button>
     </div>
   </div>
   
   <div id="main-view">
     <video id="input_video" playsinline muted></video>
     <canvas id="output_canvas"></canvas>
-    <div id="debug-info">CALIBRANDO...</div>
+    <div id="debug-info">ÁNGULO: --</div>
     
     <div id="results-panel">
-      <h2 style="color:#FFD700; margin:0;">RESULTADOS DE SERIE</h2>
+      <h2 style="color:#FFD700; margin:0;">REPORTE FINAL</h2>
       <div id="stats-content"></div>
-      <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%; margin-top:20px;">REPETIR SESIÓN</button>
+      <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%; margin-top:20px;">NUEVA SERIE</button>
     </div>
   </div>
 
-  <div id="series-counter">PROGRESO: 0 / 10</div>
+  <div id="series-counter">LISTO PARA LA PRUEBA</div>
 
   <script>
     const videoElement = document.getElementById('input_video');
@@ -96,19 +98,30 @@
     let t_inicio = 0;
     let registros = [];
 
-    // Configuración de Audio
+    // Generador de Sonido de Chicharra (Buzzer)
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playBeep() {
-        const osc = audioCtx.createOscillator();
+    function playBuzzer() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.connect(gain);
+        
+        osc1.type = "sawtooth"; // Forma de onda áspera para chicharra
+        osc1.frequency.value = 150;
+        osc2.type = "square";
+        osc2.frequency.value = 155; // Desafinado para crear efecto "grit"
+
+        osc1.connect(gain);
+        osc2.connect(gain);
         gain.connect(audioCtx.destination);
-        osc.type = "sine";
-        osc.frequency.value = 880; // Tono agudo y claro
-        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-        osc.stop(audioCtx.currentTime + 0.2);
+        
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.05);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+        
+        osc1.start(); osc2.start();
+        osc1.stop(audioCtx.currentTime + 0.4);
+        osc2.stop(audioCtx.currentTime + 0.4);
     }
 
     const pose = new Pose({
@@ -141,94 +154,97 @@
       if (res.poseLandmarks) {
         const landmarks = res.poseLandmarks;
         let cAngle = 0;
-        let points = [];
+        let p = [];
 
         if (selectedArm === 'R') {
             cAngle = calcAng(landmarks[12], landmarks[14], landmarks[16]);
-            points = [12, 14, 16];
+            p = [12, 14, 16];
         } else {
             cAngle = calcAng(landmarks[11], landmarks[13], landmarks[15]);
-            points = [11, 13, 15];
+            p = [11, 13, 15];
         }
 
-        // Dibujar Conectores y Nodos
-        const colorMain = selectedArm === 'R' ? '#FFD700' : '#00E5FF';
+        const colorTrack = selectedArm === 'R' ? '#FFD700' : '#00E5FF';
         
-        // Dibujamos líneas manualmente para asegurar visibilidad
+        // Dibujo de líneas y nodos
         canvasCtx.beginPath();
-        canvasCtx.moveTo(landmarks[points[0]].x * canvasElement.width, landmarks[points[0]].y * canvasElement.height);
-        canvasCtx.lineTo(landmarks[points[1]].x * canvasElement.width, landmarks[points[1]].y * canvasElement.height);
-        canvasCtx.lineTo(landmarks[points[2]].x * canvasElement.width, landmarks[points[2]].y * canvasElement.height);
+        canvasCtx.moveTo(landmarks[p[0]].x * canvasElement.width, landmarks[p[0]].y * canvasElement.height);
+        canvasCtx.lineTo(landmarks[p[1]].x * canvasElement.width, landmarks[p[1]].y * canvasElement.height);
+        canvasCtx.lineTo(landmarks[p[2]].x * canvasElement.width, landmarks[p[2]].y * canvasElement.height);
         canvasCtx.strokeStyle = "white";
-        canvasCtx.lineWidth = 4;
+        canvasCtx.lineWidth = 5;
         canvasCtx.stroke();
 
-        drawLandmarks(canvasCtx, [landmarks[points[0]], landmarks[points[1]], landmarks[points[2]]], {color: colorMain, lineWidth: 2});
+        drawLandmarks(canvasCtx, [landmarks[p[0]], landmarks[p[1]], landmarks[p[2]]], {color: colorTrack, lineWidth: 2});
         
-        debugText.innerText = `ÁNGULO ACTUAL: ${Math.round(cAngle)}°`;
+        debugText.innerText = `ÁNGULO ${selectedArm}: ${Math.round(cAngle)}°`;
 
         if (modo === "ATAQUE") {
           const t_actual = performance.now();
           const lapso = t_actual - t_inicio;
-          if (cAngle > 165 && lapso > 100) { // Subí a 165 para mayor exigencia técnica
-            marcarHit(lapso);
+          if (cAngle > 165 && lapso > 100) { 
+            evaluarGolpe(lapso);
           }
         }
       }
       canvasCtx.restore();
     });
 
-    function marcarHit(tiempo) {
+    function evaluarGolpe(tiempoMs) {
       modo = "PAUSA";
-      const segs = tiempo / 1000;
+      const segs = tiempoMs / 1000;
       registros.push(segs);
-      statusText.innerText = `¡EXCELENTE! ${segs.toFixed(3)}s`;
-      statusText.style.background = "#FFD700";
-      statusText.style.color = "#000";
-      counterText.innerText = `PROGRESO: ${registros.length} / 10`;
+      
+      // Lógica de Colores y Mensajes
+      if (segs < 0.50) {
+        statusText.style.background = "#28a745"; // Verde
+        statusText.innerText = `EXCELENTE! ${segs.toFixed(3)}s`;
+      } else if (segs <= 0.70) {
+        statusText.style.background = "#ffc107"; // Amarillo
+        statusText.style.color = "#000";
+        statusText.innerText = `BIEN: ${segs.toFixed(3)}s`;
+      } else {
+        statusText.style.background = "#dc3545"; // Rojo
+        statusText.innerText = `MUY LENTO: ${segs.toFixed(3)}s`;
+      }
+
+      counterText.innerText = `GOLPES: ${registros.length} / 10`;
 
       if (registros.length < 10) {
         setTimeout(esperaAleatoria, 2500);
       } else {
-        mostrarResultados();
+        finalizarSerie();
       }
     }
 
-    function mostrarResultados() {
+    function finalizarSerie() {
       modo = "FIN";
       const avg = (registros.reduce((a, b) => a + b, 0) / 10).toFixed(3);
       const min = Math.min(...registros).toFixed(3);
-      const max = Math.max(...registros).toFixed(3);
       
       document.getElementById('stats-content').innerHTML = `
         <h1 style="color:#FFD700; font-size:60px; margin:10px 0;">${avg}s</h1>
-        <p style="letter-spacing:2px;">PROMEDIO DE REACCIÓN</p>
-        <div style="display:flex; justify-content:space-around; margin-top:20px; font-size:18px;">
-            <div style="color:#0f0">MIN: ${min}s</div>
-            <div style="color:#f00">MAX: ${max}s</div>
-        </div>
+        <p>VELOCIDAD PROMEDIO</p>
+        <p style="color:#28a745">MEJOR TIEMPO: ${min}s</p>
       `;
       document.getElementById('results-panel').style.display = "block";
-      statusText.innerText = "SESIÓN COMPLETADA";
     }
 
     function esperaAleatoria() {
       modo = "ESPERA";
+      statusText.style.background = "rgba(40,40,40,0.9)";
+      statusText.style.color = "#fff";
       statusText.innerText = "¡EN GUARDIA!";
-      statusText.style.background = "rgba(0,0,0,0.8)";
-      statusText.style.color = "#FFD700";
       
-      const randomTime = Math.random() * 3000 + 2000;
       setTimeout(() => {
         if(modo === "ESPERA") {
             modo = "ATAQUE";
             t_inicio = performance.now();
-            playBeep(); // ESTÍMULO AUDITIVO
+            playBuzzer(); // DISPARO DE CHICHARRA
             statusText.innerText = "¡GOLPEA!";
-            statusText.style.background = "#FF0000";
-            statusText.style.color = "#fff";
+            statusText.style.background = "#f00";
         }
-      }, randomTime);
+      }, Math.random() * 3000 + 2000);
     }
 
     async function activarCamara() {
@@ -239,14 +255,11 @@
       await cam.start();
       document.getElementById('btn-camera').style.display = "none";
       document.getElementById('btn-start-serie').style.display = "block";
-      statusText.innerText = "CÁMARA OK";
     }
 
     function iniciarSerie() {
       registros = [];
       document.getElementById('results-panel').style.display = "none";
-      // Activamos el contexto de audio (necesario por seguridad del navegador)
-      if (audioCtx.state === 'suspended') audioCtx.resume();
       esperaAleatoria();
     }
   </script>
