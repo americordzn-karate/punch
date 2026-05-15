@@ -168,10 +168,10 @@
       registros.push({ tiempo: duracion, extension: maxExt });
       
       // Feedback semáforo
-      if (duracion < 0.65) {
+      if (duracion < 0.75) {
         statusText.style.background = "#28a745";
         statusText.innerText = `EXCELENTE! ${duracion.toFixed(3)}s`;
-      } else if (duracion <= 0.95) {
+      } else if (duracion <= 0.99) {
         statusText.style.background = "#ffc107"; statusText.style.color = "#000";
         statusText.innerText = `BIEN: ${duracion.toFixed(3)}s`;
       } else {
