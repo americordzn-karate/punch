@@ -2,37 +2,95 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Senshi-React AI - Calibración de Ángulo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Senshi-React AI - Modo Entrenamiento</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
 
   <style>
-    body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    #status { padding: 20px; background: #222; font-size: 22px; font-weight: bold; border-bottom: 4px solid #FFD700; text-align: center; }
-    #container { position: relative; flex-grow: 1; background: #111; }
-    #input_video { position: absolute; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0; }
-    #output_canvas { position: absolute; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-    .controls { padding: 25px; background: #000; display: flex; flex-direction: column; gap: 12px; }
-    button { width: 100%; padding: 20px; font-size: 18px; font-weight: bold; border: none; border-radius: 12px; text-transform: uppercase; cursor: pointer; }
-    #btn_start { background: #FFD700; color: #000; }
-    #btn_entrenar { background: #FFF; color: #000; display: none; }
+    :root { --primary: #FFD700; --bg: #000; }
+    body { 
+      margin: 0; background: var(--bg); color: white; 
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    }
+
+    /* Encabezado con Status y Logo */
+    header {
+      display: flex; justify-content: center; align-items: center;
+      padding: 15px; background: #111; border-bottom: 3px solid var(--primary);
+      position: relative; min-height: 60px;
+    }
+    #status { font-size: 20px; font-weight: bold; text-transform: uppercase; text-align: center; }
+    
+    #logo_academia {
+      position: absolute; right: 10px; top: 10px;
+      width: 50px; height: 50px;
+      object-fit: contain;
+      border-radius: 5px;
+      /* Si tienes la URL de tu logo, ponla aquí abajo en src */
+      background: rgba(255,255,255,0.1); 
+    }
+
+    /* Contenedor de Video */
+    #container { 
+      position: relative; flex: 1; background: #000;
+      display: flex; justify-content: center; align-items: center;
+    }
+    #input_video { display: none; }
+    #output_canvas { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
+
+    /* Resultados Overlay */
+    #stats_overlay {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.9); border: 2px solid var(--primary);
+      padding: 20px; border-radius: 15px; display: none; text-align: center;
+      width: 80%; z-index: 10;
+    }
+    .stat-row { font-size: 18px; margin: 10px 0; display: flex; justify-content: space-between; }
+    .stat-val { color: var(--primary); font-weight: bold; }
+
+    /* Botonera Inferior */
+    .controls { 
+      padding: 15px; background: #111; border-top: 1px solid #333;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    button { 
+      width: 100%; padding: 16px; font-size: 16px; font-weight: bold; 
+      border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer;
+    }
+    #btn_start { background: var(--primary); color: #000; }
+    #btn_reset { background: #444; color: #fff; display: none; }
+    #contador_series { text-align: center; font-size: 14px; color: #aaa; }
   </style>
 </head>
 <body>
 
-  <div id="status">SISTEMA LISTO</div>
+  <header>
+    <div id="status">CONECTE CÁMARA</div>
+    <!-- Reemplaza la URL del logo en 'src' cuando la tengas -->
+    <img id="logo_academia" src="https://via.placeholder.com/100?text=LOGO" alt="Logo">
+  </header>
   
   <div id="container">
     <video id="input_video" playsinline muted></video>
     <canvas id="output_canvas"></canvas>
+    
+    <div id="stats_overlay">
+      <h2 style="color:var(--primary); margin-top:0;">RESULTADOS SERIE</h2>
+      <div class="stat-row"><span>MÁS RÁPIDO:</span> <span id="res_min" class="stat-val">-</span></div>
+      <div class="stat-row"><span>MÁS LENTO:</span> <span id="res_max" class="stat-val">-</span></div>
+      <div class="stat-row"><span>PROMEDIO:</span> <span id="res_avg" class="stat-val">-</span></div>
+      <button onclick="reiniciarSerie()" style="background:var(--primary); color:#000; margin-top:15px;">VOLVER A MEDIR</button>
+    </div>
   </div>
 
   <div class="controls">
+    <div id="contador_series">GOLPES: 0 / 10</div>
     <button id="btn_start">1. ACTIVAR CÁMARA</button>
-    <button id="btn_entrenar">2. INICIAR ENTRENAMIENTO</button>
+    <button id="btn_reset">INICIAR SERIE (10 GOLPES)</button>
   </div>
 
   <script>
@@ -41,21 +99,20 @@
     const canvasCtx = canvasElement.getContext('2d');
     const statusDiv = document.getElementById('status');
     const btnStart = document.getElementById('btn_start');
-    const btnEntrenar = document.getElementById('btn_entrenar');
+    const btnReset = document.getElementById('btn_reset');
+    const statsOverlay = document.getElementById('stats_overlay');
+    const contadorDiv = document.getElementById('contador_series');
 
     let etapa = "ESPERANDO"; 
     let tiempoEstimulo = 0;
-    let tiempoReaccion = 0;
+    let intentos = [];
+    const MAX_INTENTOS = 10;
 
     const pose = new Pose({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
     });
 
-    pose.setOptions({
-      modelComplexity: 1,
-      minDetectionConfidence: 0.6,
-      minTrackingConfidence: 0.6
-    });
+    pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
     function calcularAngulo(A, B, C) {
       let AB = { x: B.x - A.x, y: B.y - A.y, z: B.z - A.z };
@@ -81,63 +138,82 @@
 
         if (etapa === "ESTIMULO") {
           const ahora = performance.now();
-          const tiempoTranscurrido = ahora - tiempoEstimulo;
+          const tiempoActual = ahora - tiempoEstimulo;
+          const aDer = calcularAngulo(landmarks[12], landmarks[14], landmarks[16]);
+          const aIzq = calcularAngulo(landmarks[11], landmarks[13], landmarks[15]);
 
-          const anguloDer = calcularAngulo(landmarks[12], landmarks[14], landmarks[16]);
-          const anguloIzq = calcularAngulo(landmarks[11], landmarks[13], landmarks[15]);
-
-          // --- AQUÍ AJUSTAS EL ÁNGULO (160) ---
-          if ((anguloDer > 165 || anguloIzq > 165) && tiempoTranscurrido > 150) {
-            tiempoReaccion = tiempoTranscurrido;
-            finalizarGolpe();
+          if ((aDer > 170 || aIzq > 170) && tiempoActual > 150) {
+            finalizarGolpe(tiempoActual);
           }
         }
       }
       canvasCtx.restore();
     });
 
+    function finalizarGolpe(tiempo) {
+      etapa = "GOLPE_FINALIZADO";
+      intentos.push(tiempo / 1000);
+      contadorDiv.innerText = `GOLPES: ${intentos.length} / ${MAX_INTENTOS}`;
+      statusDiv.innerText = `¡GOLPE! ${ (tiempo/1000).toFixed(3) }s`;
+      statusDiv.style.background = "#FFD700"; statusDiv.style.color = "#000";
+
+      if (intentos.length < MAX_INTENTOS) {
+        setTimeout(prepararSiguiente, 2000); // Espera 2 segs antes del siguiente "En Guardia"
+      } else {
+        mostrarResultados();
+      }
+    }
+
+    function mostrarResultados() {
+      etapa = "FINALIZADO";
+      const min = Math.min(...intentos).toFixed(3);
+      const max = Math.max(...intentos).toFixed(3);
+      const avg = (intentos.reduce((a, b) => a + b, 0) / intentos.length).toFixed(3);
+
+      document.getElementById('res_min').innerText = min + "s";
+      document.getElementById('res_max').innerText = max + "s";
+      document.getElementById('res_avg').innerText = avg + "s";
+      statsOverlay.style.display = "block";
+      statusDiv.innerText = "SERIE COMPLETADA";
+    }
+
+    function reiniciarSerie() {
+      intentos = [];
+      statsOverlay.style.display = "none";
+      contadorDiv.innerText = `GOLPES: 0 / ${MAX_INTENTOS}`;
+      prepararSiguiente();
+    }
+
     function lanzarEstimulo() {
       etapa = "ESTIMULO";
       tiempoEstimulo = performance.now();
-      statusDiv.innerText = "¡GOLPEA!";
-      statusDiv.style.background = "#FF0000"; 
-      statusDiv.style.color = "white";
-    }
-
-    function finalizarGolpe() {
-      etapa = "GOLPE";
-      const segs = (tiempoReaccion / 1000).toFixed(3);
-      statusDiv.innerText = `REACCIÓN: ${segs}s`;
-      statusDiv.style.background = "#FFD700"; 
-      statusDiv.style.color = "black";
+      statusDiv.innerText = "¡GOLPEA YA!";
+      statusDiv.style.background = "#FF0000"; statusDiv.style.color = "white";
     }
 
     function prepararSiguiente() {
       etapa = "PREPARANDO";
       statusDiv.innerText = "¡EN GUARDIA!";
-      statusDiv.style.background = "#222";
-      statusDiv.style.color = "white";
+      statusDiv.style.background = "#222"; statusDiv.style.color = "white";
       const espera = Math.floor(Math.random() * 3000) + 2000;
       setTimeout(() => { if(etapa === "PREPARANDO") lanzarEstimulo(); }, espera);
     }
 
     btnStart.addEventListener('click', async () => {
-      statusDiv.innerText = "CARGANDO IA...";
-      try {
-        const camera = new Camera(videoElement, {
-          onFrame: async () => { await pose.send({image: videoElement}); },
-          width: 640, height: 480
-        });
-        await camera.start();
-        btnStart.style.display = "none";
-        btnEntrenar.style.display = "block"; 
-        statusDiv.innerText = "SISTEMA LISTO";
-      } catch (e) {
-        statusDiv.innerText = "ERROR DE CÁMARA";
-      }
+      statusDiv.innerText = "INICIANDO IA...";
+      const camera = new Camera(videoElement, {
+        onFrame: async () => { await pose.send({image: videoElement}); },
+        width: 640, height: 480
+      });
+      await camera.start();
+      btnStart.style.display = "none";
+      btnReset.style.display = "block";
+      statusDiv.innerText = "SISTEMA LISTO";
     });
 
-    btnEntrenar.addEventListener('click', () => { prepararSiguiente(); });
+    btnReset.addEventListener('click', () => {
+      reiniciarSerie();
+    });
   </script>
 </body>
 </html>
