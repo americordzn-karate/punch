@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI v3.5 - Gráficos de Rendimiento</title>
+  <title>Senshi-React AI v3.6 - Edición Definitiva</title>
   
-  <!-- Librerías de IA y Gráficos -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -15,54 +15,69 @@
     #top-controls { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
     .btn-row { display: flex; gap: 8px; }
     
-    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; }
+    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; transition: 0.3s; }
     
-    .config-box { background: rgba(0,0,0,0.85); padding: 10px; border-radius: 10px; border: 1px solid #FFD700; display: flex; justify-content: space-between; align-items: center; }
-    input[type="number"] { width: 60px; padding: 5px; border-radius: 4px; border: 1px solid #FFD700; background: #000; color: #FFD700; font-weight: bold; text-align: center; }
+    .selector-group { display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.8); padding: 4px; border-radius: 8px; border: 1px solid #444; }
+    .opt-btn { padding: 6px 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 9px; font-weight: bold; cursor: pointer; text-align: center; }
+    .opt-btn.active { background: #FFD700; color: #000; }
 
-    #main-view { position: relative; flex-grow: 1; background: #000; display: flex; align-items: center; justify-content: center; }
+    .config-box { background: rgba(0,0,0,0.85); padding: 10px; border-radius: 10px; border: 1px solid #FFD700; display: flex; justify-content: space-between; align-items: center; }
+    input[type="number"] { width: 50px; padding: 5px; border-radius: 4px; border: 1px solid #FFD700; background: #000; color: #FFD700; font-weight: bold; text-align: center; }
+
+    #main-view { position: relative; flex-grow: 1; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     #output_canvas { max-width: 100%; max-height: 100%; }
+    .mirror { transform: scaleX(-1); }
     
-    button.action-btn { padding: 15px; font-size: 13px; font-weight: bold; border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer; flex: 1; }
+    #debug-info { position: absolute; bottom: 85px; left: 15px; background: rgba(0,0,0,0.7); padding: 6px; border-radius: 5px; font-family: monospace; color: #0f0; border: 1px solid #333; font-size: 11px; z-index: 200; }
+    
+    button.action-btn { padding: 15px; font-size: 13px; font-weight: bold; border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer; flex: 1; box-shadow: 0 4px 0 #444; }
     .btn-camera { background: #FFD700; color: #000; }
     .btn-start { background: #fff; color: #000; display: none; }
 
-    /* Panel de Resultados Expandido */
-    #results-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 500; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-    .chart-container { background: #111; border-radius: 10px; padding: 15px; margin: 15px 0; border: 1px solid #333; height: 250px; }
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-    .stat-card { background: #1a1a1a; padding: 10px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 12px; }
+    #results-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; z-index: 500; overflow-y: auto; padding: 20px; box-sizing: border-box; border-top: 5px solid #FFD700; }
+    .chart-container { background: #111; border-radius: 10px; padding: 10px; margin: 15px 0; border: 1px solid #333; height: 220px; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+    .stat-card { background: #1a1a1a; padding: 8px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 11px; display: flex; justify-content: space-between; }
+    #input_video { display: none; }
   </style>
 </head>
 <body>
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">ANALIZADOR GRAFICO</div>
+        <div id="status-display">SENSHI-KAN AI V3.6</div>
+        <div class="selector-group">
+            <div id="btn-cam-front" class="opt-btn active" onclick="switchCam('user')">FRONT</div>
+            <div id="btn-cam-back" class="opt-btn" onclick="switchCam('environment')">BACK</div>
+        </div>
+        <div class="selector-group">
+            <div id="btn-left" class="opt-btn" onclick="selectArm('L')">IZQ</div>
+            <div id="btn-right" class="opt-btn active" onclick="selectArm('R')">DER</div>
+        </div>
     </div>
     <div class="config-box">
-        <span style="font-size: 11px; font-weight:bold; color:#FFD700;">ANTEBRAZO (CM):</span>
+        <span style="font-size: 10px; font-weight:bold; color:#FFD700;">ANTEBRAZO(CM):</span>
         <input type="number" id="antebrazo-cm" value="25">
-        <button id="btn-camera" class="action-btn btn-camera" onclick="activarCamara()">1. CONECTAR</button>
+        <button id="btn-camera" class="action-btn btn-camera" style="max-width: 100px; padding: 8px; margin-left: 10px;" onclick="activarCamara()">1. CONECTAR</button>
     </div>
-    <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. COMENZAR TEST</button>
+    <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. INICIAR TEST (10 GOLPES)</button>
   </div>
   
   <div id="main-view">
-    <video id="input_video" style="display:none" playsinline muted></video>
-    <canvas id="output_canvas"></canvas>
+    <video id="input_video" playsinline muted></video>
+    <canvas id="output_canvas" class="mirror"></canvas>
+    <div id="debug-info">SISTEMA OFF</div>
     
     <div id="results-panel">
-      <h2 style="color:#FFD700; text-align:center; margin-bottom:5px;">REPORTE FINAL</h2>
-      <p id="res-resumen" style="text-align:center; margin-top:0; color:#aaa;"></p>
+      <h3 style="color:#FFD700; text-align:center; margin-bottom:5px; margin-top:0;">REPORTE DE ENTRENAMIENTO</h3>
+      <div id="res-promedios" style="text-align:center; font-size:14px; margin-bottom:10px;"></div>
       
       <div class="chart-container">
         <canvas id="performanceChart"></canvas>
       </div>
 
       <div id="stats-list" class="stat-grid"></div>
-      
-      <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%;">NUEVA SESIÓN</button>
+      <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%;">NUEVO TEST</button>
     </div>
   </div>
 
@@ -71,130 +86,227 @@
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
     const statusText = document.getElementById('status-display');
-    let registros = [];
-    let modo = "OFF";
-    let myChart = null;
+    const debugText = document.getElementById('debug-info');
 
-    // Lógica de MediaPipe y Biomecánica (Igual a la v3.2 anterior)
-    const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+    let modo = "OFF"; 
+    let selectedArm = "R";
+    let facingMode = "user"; 
+    let registros = [];
+    let myChart = null;
+    
+    // Variables de Biomecánica
+    let pxPorCm = 0;
+    let posInicialPuño = null;
+    let buscandoPico = false;
+    let picoMaximo = 0;
+    let t_inicio = 0;
+    let currentWrist = {x:0, y:0};
+
+    // --- Audio Context ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBuzzer() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sawtooth"; osc.frequency.value = 160;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+    }
+
+    const pose = new Pose({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+    });
+
     pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
-    // ... (Variables de tiempo y posición iguales a la versión anterior)
-    let t_inicio, currentWrist, posInicialPuño, pxPorCm, buscandoPico;
+    function switchCam(mode) {
+      if (modo !== "OFF") return;
+      facingMode = mode;
+      document.getElementById('btn-cam-front').classList.toggle('active', mode === 'user');
+      document.getElementById('btn-cam-back').classList.toggle('active', mode === 'environment');
+      canvasElement.classList.toggle('mirror', mode === 'user');
+    }
+
+    function selectArm(side) {
+      selectedArm = side;
+      document.getElementById('btn-left').classList.toggle('active', side === 'L');
+      document.getElementById('btn-right').classList.toggle('active', side === 'R');
+    }
+
+    function calcAng(p1, p2, p3) {
+      let angle = (Math.atan2(p3.y - p2.y, p3.x - p2.x) - Math.atan2(p1.y - p2.y, p1.x - p2.x)) * 180 / Math.PI;
+      angle = Math.abs(angle);
+      if (angle > 180) angle = 360 - angle;
+      return angle;
+    }
 
     pose.onResults((res) => {
       canvasElement.width = videoElement.videoWidth;
       canvasElement.height = videoElement.videoHeight;
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      
+      // Dibujar cámara
       canvasCtx.drawImage(res.image, 0, 0, canvasElement.width, canvasElement.height);
+      
       if (res.poseLandmarks) {
         const lm = res.poseLandmarks;
-        const codo = lm[14]; const muñeca = lm[16]; const hombro = lm[12];
-        currentWrist = {x: muñeca.x, y: muñeca.y};
-        pxPorCm = Math.hypot((muñeca.x - codo.x) * canvasElement.width, (muñeca.y - codo.y) * canvasElement.height) / parseFloat(document.getElementById('antebrazo-cm').value);
+        const p = (selectedArm === 'R') ? [12, 14, 16] : [11, 13, 15];
         
-        let ang = (Math.atan2(muñeca.y - codo.y, muñeca.x - codo.x) - Math.atan2(hombro.y - codo.y, hombro.x - codo.x)) * 180 / Math.PI;
-        ang = Math.abs(ang); if (ang > 180) ang = 360 - ang;
+        const hombro = lm[p[0]];
+        const codo = lm[p[1]];
+        const muñeca = lm[p[2]];
+        currentWrist = {x: muñeca.x, y: muñeca.y};
+
+        // Calibración de escala
+        const distPx = Math.hypot((muñeca.x - codo.x) * canvasElement.width, (muñeca.y - codo.y) * canvasElement.height);
+        const cmReal = parseFloat(document.getElementById('antebrazo-cm').value);
+        pxPorCm = distPx / cmReal;
+
+        const ang = calcAng(hombro, codo, muñeca);
+        
+        // --- DIBUJAR LÍNEAS Y NODOS (Restaurado) ---
+        const colorHilos = "#00FF00"; // Verde Neón
+        canvasCtx.lineWidth = 4;
+        canvasCtx.strokeStyle = "rgba(255,255,255,0.8)";
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(hombro.x * canvasElement.width, hombro.y * canvasElement.height);
+        canvasCtx.lineTo(codo.x * canvasElement.width, codo.y * canvasElement.height);
+        canvasCtx.lineTo(muñeca.x * canvasElement.width, muñeca.y * canvasElement.height);
+        canvasCtx.stroke();
+
+        drawLandmarks(canvasCtx, [hombro, codo, muñeca], {color: colorHilos, lineWidth: 2});
+
+        debugText.innerText = `ÁNGULO: ${Math.round(ang)}° | ESCALA: ${pxPorCm.toFixed(1)} px/cm`;
 
         if (modo === "ATAQUE") {
-          if (!buscandoPico && ang > 160) { buscandoPico = true; }
+          if (!buscandoPico && ang > 160) {
+            buscandoPico = true;
+            picoMaximo = ang;
+          }
           if (buscandoPico) {
-             if (ang >= 170) { /* sigue extendiendo */ } 
-             else { finalizarGolpe(ang, muñeca); }
+            if (ang >= picoMaximo) picoMaximo = ang;
+            else finalizarGolpe(picoMaximo, muñeca);
           }
         }
       }
+      canvasCtx.restore();
     });
 
     function finalizarGolpe(maxExt, posFinal) {
-      const dur = (performance.now() - t_inicio) / 1000;
-      const dPx = Math.hypot((posFinal.x - posInicialPuño.x)*canvasElement.width, (posFinal.y - posInicialPuño.y)*canvasElement.height);
-      const dCm = dPx / pxPorCm;
-      const vMs = (dCm/100)/dur;
+      const t_final = performance.now();
+      const duracion = (t_final - t_inicio) / 1000;
       
-      buscandoPico = false; modo = "PAUSA";
-      registros.push({ tiempo: dur, velocidad: vMs, distancia: dCm });
-      
-      // Aplicar semáforo del Sensei
-      if(dur < 0.75) statusText.style.background = "#28a745";
-      else if(dur <= 0.99) statusText.style.background = "#ffc107";
-      else statusText.style.background = "#dc3545";
-      statusText.innerText = `${dur.toFixed(3)}s | ${vMs.toFixed(2)} m/s`;
+      const distPx = Math.hypot((posFinal.x - posInicialPuño.x) * canvasElement.width, (posFinal.y - posInicialPuño.y) * canvasElement.height);
+      const desplCm = distPx / pxPorCm;
+      const velMs = (desplCm / 100) / duracion;
 
-      if (registros.length < 10) setTimeout(esperaAleatoria, 2000);
-      else generarGrafica();
+      buscandoPico = false;
+      modo = "PAUSA";
+      registros.push({ tiempo: duracion, extension: maxExt, distancia: desplCm, velocidad: velMs });
+      
+      // SEMÁFORO (Restaurado con sus valores)
+      if (duracion < 0.75) {
+        statusText.style.background = "#28a745"; // Verde
+        statusText.style.color = "#fff";
+        statusText.innerText = `EXCELENTE: ${duracion.toFixed(3)}s`;
+      } else if (duracion <= 0.99) {
+        statusText.style.background = "#ffc107"; // Amarillo
+        statusText.style.color = "#000";
+        statusText.innerText = `BIEN: ${duracion.toFixed(3)}s`;
+      } else {
+        statusText.style.background = "#dc3545"; // Rojo
+        statusText.style.color = "#fff";
+        statusText.innerText = `LENTO: ${duracion.toFixed(3)}s`;
+      }
+
+      if (registros.length < 10) setTimeout(esperaAleatoria, 2500);
+      else mostrarResultadosFinales();
     }
 
-    function generarGrafica() {
+    function mostrarResultadosFinales() {
       modo = "FIN";
       document.getElementById('results-panel').style.display = "block";
       
-      const etiquetas = registros.map((_, i) => `G${i+1}`);
-      const datosTiempo = registros.map(r => r.tiempo);
-      const datosVelocidad = registros.map(r => r.velocidad);
+      const avgV = (registros.reduce((a, b) => a + b.velocidad, 0) / 10).toFixed(2);
+      const avgT = (registros.reduce((a, b) => a + b.tiempo, 0) / 10).toFixed(3);
+      document.getElementById('res-promedios').innerHTML = `<b>Promedio:</b> ${avgT}s | <b>Vel:</b> ${avgV} m/s`;
 
+      // --- GRÁFICA ---
       const ctx = document.getElementById('performanceChart').getContext('2d');
       if (myChart) myChart.destroy();
-
       myChart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: etiquetas,
-          datasets: [
-            {
-              label: 'Velocidad (m/s)',
-              data: datosVelocidad,
-              borderColor: '#FFD700',
-              backgroundColor: 'rgba(255, 215, 0, 0.2)',
-              yAxisID: 'yVel',
-              tension: 0.4
-            },
-            {
-              label: 'Reacción (s)',
-              data: datosTiempo,
-              borderColor: '#fff',
-              borderDash: [5, 5],
-              yAxisID: 'yTime',
-              tension: 0.1
-            }
-          ]
+          labels: registros.map((_, i) => `G${i+1}`),
+          datasets: [{
+            label: 'Velocidad (m/s)',
+            data: registros.map(r => r.velocidad),
+            borderColor: '#FFD700',
+            backgroundColor: 'rgba(255,215,0,0.1)',
+            yAxisID: 'yVel',
+            tension: 0.3
+          }, {
+            label: 'Tiempo (s)',
+            data: registros.map(r => r.tiempo),
+            borderColor: '#fff',
+            borderDash: [5, 5],
+            yAxisID: 'yTime',
+            tension: 0.1
+          }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            yVel: { type: 'linear', position: 'left', title: { display: true, text: 'm/s', color: '#FFD700' } },
-            yTime: { type: 'linear', position: 'right', title: { display: true, text: 'Segundos' }, grid: { drawOnChartArea: false } }
-          },
-          plugins: { legend: { labels: { color: '#fff', boxWidth: 12 } } }
+            yVel: { position: 'left', title: { display: true, text: 'm/s', color:'#FFD700' } },
+            yTime: { position: 'right', title: { display: true, text: 'Seg' } }
+          }
         }
       });
 
-      // Llenar lista de stats
       let html = "";
       registros.forEach((r, i) => {
-        html += `<div class="stat-card"><b>#${i+1}</b>: ${r.tiempo.toFixed(3)}s<br><span style="color:#FFD700">${r.velocidad.toFixed(2)} m/s</span></div>`;
+        html += `<div class="stat-card"><span>#${i+1}</span> <b>${r.tiempo.toFixed(3)}s</b> <span style="color:#FFD700">${r.velocidad.toFixed(2)}m/s</span></div>`;
       });
       document.getElementById('stats-list').innerHTML = html;
     }
 
-    // ... (Funciones auxiliares activarCamara, iniciarSerie y esperaAleatoria iguales)
-    async function activarCamara() { 
-        const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, width: 640, height: 480 });
-        camera.start(); 
-        document.getElementById('btn-camera').style.display="none"; 
-        document.getElementById('btn-start-serie').style.display="block"; 
-    }
-    function iniciarSerie() { registros = []; document.getElementById('results-panel').style.display="none"; esperaAleatoria(); }
     function esperaAleatoria() {
-      modo = "ESPERA"; statusText.innerText = "¡LISTO!"; statusText.style.background = "#1a1a1a";
+      modo = "ESPERA";
+      statusText.innerText = "¡EN GUARDIA!";
+      statusText.style.background = "#1a1a1a";
+      statusText.style.color = "#fff";
       setTimeout(() => {
         if(modo === "ESPERA") {
-          posInicialPuño = {x: currentWrist.x, y: currentWrist.y};
-          modo = "ATAQUE"; t_inicio = performance.now();
-          // Sonido buzzer...
-          statusText.innerText = "¡YA!"; statusText.style.background = "#f00";
+          posInicialPuño = { x: currentWrist.x, y: currentWrist.y }; 
+          modo = "ATAQUE";
+          t_inicio = performance.now();
+          playBuzzer(); // SONIDO RESTAURADO
+          statusText.innerText = "¡GOLPEA!"; 
+          statusText.style.background = "#f00";
         }
       }, Math.random() * 3000 + 2000);
+    }
+
+    async function activarCamara() {
+      const camera = new Camera(videoElement, {
+        onFrame: async () => { await pose.send({image: videoElement}); },
+        facingMode: facingMode,
+        width: 640, height: 480
+      });
+      camera.start();
+      document.getElementById('btn-camera').style.display = "none";
+      document.getElementById('btn-start-serie').style.display = "block";
+      debugText.innerText = "CÁMARA OK";
+    }
+
+    function iniciarSerie() {
+      registros = [];
+      document.getElementById('results-panel').style.display = "none";
+      esperaAleatoria();
     }
   </script>
 </body>
