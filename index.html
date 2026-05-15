@@ -136,15 +136,21 @@
         if (etapa === "ESTIMULO") {
           const zDer = landmarks[16].z; 
           const zIzq = landmarks[15].z;
-          if (zDer < -0.12 || zIzq < -0.12) {
-            tiempoReaccion = performance.now() - tiempoEstimulo;
+          
+          // Calculamos cuánto tiempo ha pasado desde el color rojo
+          const tiempoTranscurrido = performance.now() - tiempoEstimulo;
+
+          // REGLA DE SEGURIDAD: 
+          // 1. El puño debe estar más cerca (z < -0.25 en lugar de -0.12)
+          // 2. Deben haber pasado al menos 100ms (evita disparos accidentales)
+          if ((zDer < -0.25 || zIzq < -0.25) && tiempoTranscurrido > 100) {
+            tiempoReaccion = tiempoTranscurrido;
             finalizarGolpe();
           }
         }
       }
       canvasCtx.restore();
     });
-
     function lanzarEstimulo() {
       etapa = "ESTIMULO";
       tiempoEstimulo = performance.now();
