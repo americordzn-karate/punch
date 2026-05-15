@@ -138,21 +138,25 @@
         drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, {color: '#FFFFFF', lineWidth: 2});
         drawLandmarks(canvasCtx, landmarks, {color: '#FFD700', lineWidth: 1});
 
-        const zActualDer = landmarks[16].z;
-        const zActualIzq = landmarks[15].z;
+        // Puntos clave para la lógica
+        const munecaDer = landmarks[16];
+        const munecaIzq = landmarks[15];
+        const hombroDer = landmarks[12];
+        const hombroIzq = landmarks[11];
 
-        // FASE DE GUARDIA: Guardamos la posición de tus manos
-        if (etapa === "PREPARANDO") {
-            zBaseDer = zActualDer;
-            zBaseIzq = zActualIzq;
-        }
-
-        // FASE DE ESTÍMULO: Detectamos el desplazamiento
+        // FASE DE ESTIMULO: Solo aquí medimos la reacción
         if (etapa === "ESTIMULO") {
           const tiempoTranscurrido = performance.now() - tiempoEstimulo;
 
-          // Si la mano actual está más cerca de la cámara que la mano en guardia + la sensibilidad
-          if ((zActualDer < zBaseDer - sensibilidad || zActualIzq < zBaseIzq - sensibilidad) && tiempoTranscurrido > 150) {
+          // CÁLCULO DE EXTENSIÓN:
+          // Comparamos la profundidad de la muñeca contra el hombro.
+          // Un valor de 0.4 de diferencia suele indicar una extensión frontal casi completa (cerca de la cámara).
+          const extensionDer = hombroDer.z - munecaDer.z;
+          const extensionIzq = hombroIzq.z - munecaIzq.z;
+
+          // REGLA: Debe haber una extensión clara (brazo proyectado al frente)
+          // Ajusta el 0.45 si quieres que necesite acercarse aún más (0.50) o menos (0.40)
+          if ((extensionDer > 0.45 || extensionIzq > 0.45) && tiempoTranscurrido > 180) {
             tiempoReaccion = tiempoTranscurrido;
             finalizarGolpe();
           }
