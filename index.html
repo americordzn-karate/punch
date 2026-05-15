@@ -93,7 +93,7 @@
 
           // Un brazo "estirado" tiene un ángulo cercano a 180°. 
           // Debido a la perspectiva frontal, usaremos un umbral de 160° para detectar extensión.
-          if ((anguloDer > 160 || anguloIzq > 160) && tiempoTranscurrido > 150) {
+          if ((anguloDer > 145 || anguloIzq > 145) && tiempoTranscurrido > 150) {
             tiempoReaccion = tiempoTranscurrido;
             finalizarGolpe();
           }
