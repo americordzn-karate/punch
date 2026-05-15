@@ -110,6 +110,11 @@
     let etapa = "ESPERANDO"; 
     let tiempoEstimulo = 0;
     let tiempoReaccion = 0;
+    
+    // VARIABLES DE CALIBRACIÓN
+    let zBaseDer = 0;
+    let zBaseIzq = 0;
+    let sensibilidad = 0.15; // Cuánta distancia debe recorrer el puño (0.15 es aprox. 20-30cm)
 
     const pose = new Pose({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
@@ -133,17 +138,21 @@
         drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, {color: '#FFFFFF', lineWidth: 2});
         drawLandmarks(canvasCtx, landmarks, {color: '#FFD700', lineWidth: 1});
 
+        const zActualDer = landmarks[16].z;
+        const zActualIzq = landmarks[15].z;
+
+        // FASE DE GUARDIA: Guardamos la posición de tus manos
+        if (etapa === "PREPARANDO") {
+            zBaseDer = zActualDer;
+            zBaseIzq = zActualIzq;
+        }
+
+        // FASE DE ESTÍMULO: Detectamos el desplazamiento
         if (etapa === "ESTIMULO") {
-          const zDer = landmarks[16].z; 
-          const zIzq = landmarks[15].z;
-          
-          // Calculamos cuánto tiempo ha pasado desde el color rojo
           const tiempoTranscurrido = performance.now() - tiempoEstimulo;
 
-          // REGLA DE SEGURIDAD: 
-          // 1. El puño debe estar más cerca (z < -0.25 en lugar de -0.12)
-          // 2. Deben haber pasado al menos 100ms (evita disparos accidentales)
-          if ((zDer < -0.25 || zIzq < -0.25) && tiempoTranscurrido > 100) {
+          // Si la mano actual está más cerca de la cámara que la mano en guardia + la sensibilidad
+          if ((zActualDer < zBaseDer - sensibilidad || zActualIzq < zBaseIzq - sensibilidad) && tiempoTranscurrido > 150) {
             tiempoReaccion = tiempoTranscurrido;
             finalizarGolpe();
           }
@@ -151,6 +160,7 @@
       }
       canvasCtx.restore();
     });
+
     function lanzarEstimulo() {
       etapa = "ESTIMULO";
       tiempoEstimulo = performance.now();
@@ -165,22 +175,20 @@
       statusDiv.innerText = `TIEMPO: ${segs}s`;
       statusDiv.style.background = "#FFD700"; 
       statusDiv.style.color = "black";
-      // No reiniciamos automáticamente para que el atleta vea su tiempo
     }
 
     function prepararSiguiente() {
       etapa = "PREPARANDO";
-      statusDiv.innerText = "¡EN GUARDIA! (Espera...)";
+      statusDiv.innerText = "¡EN GUARDIA! (No te muevas)";
       statusDiv.style.background = "#222";
       statusDiv.style.color = "white";
       
+      // Espera aleatoria para que el atleta no prediga el color rojo
       const espera = Math.floor(Math.random() * 3000) + 2000;
       setTimeout(() => {
-        lanzarEstimulo();
+        if(etapa === "PREPARANDO") lanzarEstimulo();
       }, espera);
     }
-
-    // --- CONEXIÓN DE BOTONES MEJORADA ---
 
     btnStart.addEventListener('click', async () => {
       statusDiv.innerText = "CONECTANDO IA...";
@@ -194,12 +202,11 @@
         btnEntrenar.style.display = "block"; 
         statusDiv.innerText = "SISTEMA LISTO";
       } catch (e) {
-        statusDiv.innerText = "ERROR DE CÁMARA: " + e;
+        statusDiv.innerText = "ERROR DE CÁMARA";
       }
     });
 
     btnEntrenar.addEventListener('click', () => {
-      console.log("Botón de entrenamiento presionado");
       prepararSiguiente();
     });
   </script>
