@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI v4.0 - Biomecánica Avanzada</title>
+  <title>Senshi-React AI v4.2 - Kinética de Impacto</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -14,7 +14,7 @@
     body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     #top-controls { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
     .btn-row { display: flex; gap: 8px; }
-    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; transition: 0.3s; text-transform: uppercase; }
+    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; text-transform: uppercase; }
     .selector-group { display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.8); padding: 4px; border-radius: 8px; border: 1px solid #444; }
     .opt-btn { padding: 6px 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 9px; font-weight: bold; cursor: pointer; text-align: center; }
     .opt-btn.active { background: #FFD700; color: #000; }
@@ -28,9 +28,9 @@
     .btn-camera { background: #FFD700; color: #000; }
     .btn-start { background: #fff; color: #000; display: none; }
     #results-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; z-index: 500; overflow-y: auto; padding: 15px; box-sizing: border-box; border-top: 5px solid #FFD700; }
-    .chart-container { background: #111; border-radius: 10px; padding: 10px; margin: 10px 0; border: 1px solid #333; height: 200px; }
-    .stat-grid { display: grid; grid-template-columns: 1fr; gap: 5px; margin-bottom: 20px; }
-    .stat-card { background: #1a1a1a; padding: 10px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 11px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; align-items: center; text-align: center; }
+    .chart-container { background: #111; border-radius: 10px; padding: 10px; margin: 10px 0; border: 1px solid #333; height: 230px; }
+    .stat-grid { display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 20px; }
+    .stat-card { background: #1a1a1a; padding: 10px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 10px; display: grid; grid-template-columns: 0.5fr 1fr 1fr 1fr 1.2fr; align-items: center; text-align: center; }
     #input_video { display: none; }
   </style>
 </head>
@@ -38,7 +38,7 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">SENSHI-KAN V4.0</div>
+        <div id="status-display">SENSHI-KAN V4.2</div>
         <div class="selector-group">
             <div id="btn-cam-front" class="opt-btn active" onclick="switchCam('user')">FRONT</div>
             <div id="btn-cam-back" class="opt-btn" onclick="switchCam('environment')">BACK</div>
@@ -61,11 +61,11 @@
     <canvas id="output_canvas" class="mirror"></canvas>
     
     <div id="results-panel">
-      <h3 style="color:#FFD700; text-align:center; margin:0;">ANÁLISIS DE IMPACTO</h3>
-      <div id="res-promedios" style="text-align:center; font-size:12px; margin:10px 0; color:#ddd;"></div>
+      <h3 style="color:#FFD700; text-align:center; margin:0;">ANÁLISIS KINÉTICO</h3>
+      <div id="res-promedios" style="text-align:center; font-size:11px; margin:8px 0; color:#ddd;"></div>
       <div class="chart-container"><canvas id="performanceChart"></canvas></div>
-      <div style="font-size: 9px; color: #FFD700; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; text-align: center; margin-bottom: 5px; font-weight: bold;">
-          <span>ORDEN</span><span>TIEMPO</span><span>DIST.</span><span>VELOC.</span><span>POTENCIA</span>
+      <div style="font-size: 9px; color: #FFD700; display: grid; grid-template-columns: 0.5fr 1fr 1fr 1fr 1.2fr; text-align: center; margin-bottom: 5px; font-weight: bold; text-transform: uppercase;">
+          <span>#</span><span>Tiempo</span><span>Dist.</span><span>Vel.</span><span>Fuerza</span>
       </div>
       <div id="stats-list" class="stat-grid"></div>
       <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%;">NUEVO TEST</button>
@@ -78,15 +78,10 @@
     const canvasCtx = canvasElement.getContext('2d');
     const statusText = document.getElementById('status-display');
 
-    let modo = "OFF"; 
-    let selectedArm = "R";
-    let facingMode = "user"; 
-    let registros = [];
-    let myChart = null;
-    
+    let modo = "OFF", selectedArm = "R", facingMode = "user", registros = [], myChart = null;
     let pxPorCm = 0, posInicialPuño = null, buscandoPico = false, picoMaximo = 0, t_inicio = 0, currentWrist = {x:0, y:0};
 
-    // --- SISTEMA DE AUDIO ---
+    // --- AUDIO ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playAudio(freq, dur, type="sawtooth") {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -133,6 +128,7 @@
         let ang = Math.abs((Math.atan2(muñeca.y - codo.y, muñeca.x - codo.x) - Math.atan2(hombro.y - codo.y, hombro.x - codo.x)) * 180 / Math.PI);
         if (ang > 180) ang = 360 - ang;
 
+        // Visualización de nodos (Restaurada)
         canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = "#00FF00";
         canvasCtx.beginPath();
         canvasCtx.moveTo(hombro.x * canvasElement.width, hombro.y * canvasElement.height);
@@ -158,13 +154,16 @@
       const vMs = (dCm / 100) / dur;
       const vKmh = vMs * 3.6;
       
-      // Cálculo Potencia: Masa efectiva brazo (2.3% del peso)
+      // Cálculo de Fuerza (F = m * a)
+      // Masa brazo ~ 2.3% peso total. Aceleración = vMs / dur
       const masaBrazo = parseFloat(document.getElementById('peso-kg').value) * 0.023;
-      const watts = (0.5 * masaBrazo * Math.pow(vMs, 2)) / dur;
+      const aceleracion = vMs / dur;
+      const fuerzaNewtons = masaBrazo * aceleracion;
+      const fuerzaKg = fuerzaNewtons / 9.81; // Convertir Newtons a Kg-fuerza
 
-      playAudio(880, 0.1, "sine"); // BEEP DE CONFIRMACIÓN (Agudo)
+      playAudio(1000, 0.1, "sine"); // BEEP CONFIRMACIÓN
       buscandoPico = false; modo = "PAUSA";
-      registros.push({ tiempo: dur, kmh: vKmh, vms: vMs, distancia: dCm, potencia: watts });
+      registros.push({ tiempo: dur, kmh: vKmh, distancia: dCm, fuerza: fuerzaKg });
       
       if (dur < 0.75) { statusText.style.background = "#28a745"; statusText.innerText = `EXCELENTE: ${dur.toFixed(2)}s`; }
       else if (dur <= 0.99) { statusText.style.background = "#ffc107"; statusText.innerText = `BIEN: ${dur.toFixed(2)}s`; }
@@ -172,7 +171,7 @@
 
       if (registros.length < 10) setTimeout(esperaAleatoria, 2500);
       else {
-          playAudio(120, 1.2, "sawtooth"); // BUZZ FINAL LARGO
+          playAudio(150, 1.0, "sawtooth"); // BUZZ FINAL
           mostrarResultadosFinales();
       }
     }
@@ -181,28 +180,40 @@
       modo = "FIN";
       document.getElementById('results-panel').style.display = "block";
       const avgK = (registros.reduce((a, b) => a + b.kmh, 0) / 10).toFixed(1);
-      const avgW = (registros.reduce((a, b) => a + b.potencia, 0) / 10).toFixed(0);
-      document.getElementById('res-promedios').innerHTML = `PROMEDIO: ${avgK} km/h | POTENCIA MEDIA: ${avgW} W`;
+      const avgF = (registros.reduce((a, b) => a + b.fuerza, 0) / 10).toFixed(1);
+      document.getElementById('res-promedios').innerHTML = `PROMEDIO: ${avgK} km/h | FUERZA MEDIA: ${avgF} kg-f`;
 
       const ctx = document.getElementById('performanceChart').getContext('2d');
       if (myChart) myChart.destroy();
       myChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
           labels: registros.map((_, i) => `G${i+1}`),
-          datasets: [{ label: 'km/h', data: registros.map(r => r.kmh), backgroundColor: '#FFD700', yAxisID: 'yK' },
-                     { label: 'Watts', data: registros.map(r => r.potencia), type: 'line', borderColor: '#fff', yAxisID: 'yW' }]
+          datasets: [
+            { label: 'Tiempo (s)', data: registros.map(r => r.tiempo), borderColor: '#fff', tension: 0.3, yAxisID: 'yT' },
+            { label: 'km/h', data: registros.map(r => r.kmh), borderColor: '#FFD700', tension: 0.3, yAxisID: 'yK' },
+            { label: 'Dist. (cm)', data: registros.map(r => r.distancia), borderColor: '#00FF00', tension: 0.3, yAxisID: 'yD' }
+          ]
         },
-        options: { responsive: true, maintainAspectRatio: false, scales: { yK: { position: 'left' }, yW: { position: 'right', grid: { drawOnChartArea: false } } } }
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: { 
+                yT: { position: 'left', title: { display: true, text: 'Seg' } },
+                yK: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'km/h' } },
+                yD: { display: false } 
+            },
+            plugins: { legend: { labels: { font: { size: 10 }, color: '#fff' } } }
+        }
       });
 
       let html = "";
       registros.forEach((r, i) => {
         html += `<div class="stat-card">
-            <span>#${i+1}</span><span>${r.tiempo.toFixed(3)}s</span>
+            <span>${i+1}</span><span>${r.tiempo.toFixed(3)}s</span>
             <span>${r.distancia.toFixed(0)}cm</span>
-            <span style="color:#FFD700">${r.kmh.toFixed(1)}k/h</span>
-            <span style="font-weight:bold; color:#0f0">${r.potencia.toFixed(0)}W</span>
+            <span style="color:#FFD700">${r.kmh.toFixed(1)}</span>
+            <span style="font-weight:bold; color:#0f0">${r.fuerza.toFixed(1)}kg</span>
         </div>`;
       });
       document.getElementById('stats-list').innerHTML = html;
