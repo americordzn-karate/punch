@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI v2.8 - Peak Precision</title>
+  <title>Senshi-React AI v2.9 - Cámara Dual</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -11,21 +11,30 @@
 
   <style>
     body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    #top-controls { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 10px; }
-    .btn-row { display: flex; gap: 10px; }
-    #status-display { background: rgba(30,30,30,0.95); padding: 15px; border-radius: 10px; border: 3px solid #FFD700; font-size: 22px; font-weight: bold; text-align: center; flex-grow: 1; transition: all 0.1s ease; color: #fff; }
+    #top-controls { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+    .btn-row { display: flex; gap: 8px; align-items: stretch; }
+    
+    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; color: #fff; display: flex; align-items: center; justify-content: center; }
+    
+    .selector-group { display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.8); padding: 4px; border-radius: 8px; border: 1px solid #444; }
+    
+    .opt-btn { padding: 8px 12px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 10px; font-weight: bold; cursor: pointer; text-align: center; text-transform: uppercase; }
+    .opt-btn.active { background: #FFD700; color: #000; }
+
     #main-view { position: relative; flex-grow: 1; background: #000; display: flex; align-items: center; justify-content: center; }
-    #output_canvas { max-width: 100%; max-height: 100%; transform: scaleX(-1); }
-    #debug-info { position: absolute; bottom: 100px; left: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-family: monospace; color: #0f0; border: 1px solid #333; font-size: 16px; }
-    #arm-selector { display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 8px; }
-    .arm-btn { padding: 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; }
-    .arm-btn.active { background: #FFD700; color: #000; }
+    #output_canvas { max-width: 100%; max-height: 100%; }
+    /* Clase para modo selfie (espejo) */
+    .mirror { transform: scaleX(-1); }
+    
+    #debug-info { position: absolute; bottom: 100px; left: 20px; background: rgba(0,0,0,0.7); padding: 8px; border-radius: 5px; font-family: monospace; color: #0f0; border: 1px solid #333; font-size: 14px; pointer-events: none; }
+    
     button.action-btn { padding: 15px; font-size: 14px; font-weight: bold; border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer; flex: 1; }
     .btn-camera { background: #FFD700; color: #000; }
     .btn-start { background: #fff; color: #000; display: none; }
-    #results-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.98); border: 3px solid #FFD700; border-radius: 15px; padding: 25px; display: none; z-index: 400; width: 90%; text-align: center; max-height: 85vh; overflow-y: auto; }
-    .stat-card { background: #1a1a1a; padding: 12px; margin: 6px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #FFD700; }
-    #series-counter { position: absolute; bottom: 30px; width: 100%; text-align: center; font-weight: bold; color: #FFD700; font-size: 18px; }
+
+    #results-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.98); border: 3px solid #FFD700; border-radius: 15px; padding: 20px; display: none; z-index: 400; width: 90%; text-align: center; max-height: 85vh; overflow-y: auto; }
+    .stat-card { background: #1a1a1a; padding: 10px; margin: 5px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #FFD700; font-size: 13px; }
+    #series-counter { position: absolute; bottom: 30px; width: 100%; text-align: center; font-weight: bold; color: #FFD700; font-size: 16px; text-shadow: 1px 1px 2px #000; }
     #input_video { display: none; }
   </style>
 </head>
@@ -33,32 +42,36 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">SISTEMA LISTO</div>
-        <div id="arm-selector">
-            <div id="btn-left" class="arm-btn" onclick="selectArm('L')">IZQ</div>
-            <div id="btn-right" class="arm-btn active" onclick="selectArm('R')">DER</div>
+        <div id="status-display">LISTO</div>
+        <div class="selector-group">
+            <div id="btn-cam-front" class="opt-btn active" onclick="switchCam('user')">FRONTAL</div>
+            <div id="btn-cam-back" class="opt-btn" onclick="switchCam('environment')">TRASERA</div>
+        </div>
+        <div class="selector-group">
+            <div id="btn-left" class="opt-btn" onclick="selectArm('L')">BRAZO IZQ</div>
+            <div id="btn-right" class="opt-btn active" onclick="selectArm('R')">BRAZO DER</div>
         </div>
     </div>
     <div class="btn-row">
-        <button id="btn-camera" class="action-btn btn-camera" onclick="activarCamara()">1. CONECTAR CÁMARA</button>
-        <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. COMENZAR SERIE</button>
+        <button id="btn-camera" class="action-btn btn-camera" onclick="activarCamara()">1. CONECTAR</button>
+        <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. INICIAR 10 GOLPES</button>
     </div>
   </div>
   
   <div id="main-view">
     <video id="input_video" playsinline muted></video>
-    <canvas id="output_canvas"></canvas>
+    <canvas id="output_canvas" class="mirror"></canvas>
     <div id="debug-info">ANG: --</div>
     
     <div id="results-panel">
-      <h2 style="color:#FFD700; margin-top:0;">REPORTE FINAL SENSHI-KAN</h2>
-      <div id="stats-summary" style="margin-bottom:20px;"></div>
+      <h3 style="color:#FFD700; margin-top:0;">REPORTE SENSHI-KAN</h3>
+      <div id="stats-summary" style="margin-bottom:15px;"></div>
       <div id="stats-list"></div>
-      <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%; margin-top:20px;">NUEVA SESIÓN</button>
+      <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%; margin-top:15px;">NUEVA SESIÓN</button>
     </div>
   </div>
 
-  <div id="series-counter">LISTO</div>
+  <div id="series-counter">ESPERANDO CÁMARA</div>
 
   <script>
     const videoElement = document.getElementById('input_video');
@@ -70,13 +83,13 @@
 
     let modo = "OFF"; 
     let selectedArm = "R";
+    let facingMode = "user"; 
+    let cameraInstance = null;
     let t_inicio = 0;
     let registros = [];
     
-    // Lógica de Pico
     let buscandoPico = false;
     let picoMaximo = 0;
-    let ultimoAngulo = 0;
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playBuzzer() {
@@ -84,7 +97,7 @@
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = "sawtooth";
-        osc.frequency.value = 190;
+        osc.frequency.value = 145;
         osc.connect(gain); gain.connect(audioCtx.destination);
         gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
@@ -96,6 +109,18 @@
     });
 
     pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+
+    function switchCam(mode) {
+      if (modo !== "OFF") {
+          alert("Reinicia la app para cambiar de cámara");
+          return;
+      }
+      facingMode = mode;
+      document.getElementById('btn-cam-front').classList.toggle('active', mode === 'user');
+      document.getElementById('btn-cam-back').classList.toggle('active', mode === 'environment');
+      // La cámara trasera no debe estar en modo espejo
+      canvasElement.classList.toggle('mirror', mode === 'user');
+    }
 
     function selectArm(side) {
       selectedArm = side;
@@ -116,6 +141,8 @@
       canvasElement.height = videoElement.videoHeight;
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      
+      // Si es cámara trasera, no invertimos el dibujo
       canvasCtx.drawImage(res.image, 0, 0, canvasElement.width, canvasElement.height);
       
       if (res.poseLandmarks) {
@@ -123,7 +150,6 @@
         let p = (selectedArm === 'R') ? [12, 14, 16] : [11, 13, 15];
         let ang = calcAng(lm[p[0]], lm[p[1]], lm[p[2]]);
 
-        // Visualización
         const color = selectedArm === 'R' ? '#FFD700' : '#00E5FF';
         canvasCtx.beginPath();
         canvasCtx.moveTo(lm[p[0]].x * canvasElement.width, lm[p[0]].y * canvasElement.height);
@@ -132,55 +158,39 @@
         canvasCtx.strokeStyle = "white"; canvasCtx.lineWidth = 4; canvasCtx.stroke();
         drawLandmarks(canvasCtx, [lm[p[0]], lm[p[1]], lm[p[2]]], {color: color, lineWidth: 2});
         
-        debugText.innerText = `ÁNGULO ACTUAL: ${Math.round(ang)}°`;
+        debugText.innerText = `ANG ${selectedArm}: ${Math.round(ang)}°`;
 
         if (modo === "ATAQUE") {
-          // Si cruzamos el umbral de 165°, empezamos a buscar el pico
           if (!buscandoPico && ang > 165) {
             buscandoPico = true;
             picoMaximo = ang;
           }
-
           if (buscandoPico) {
-            // Mientras el brazo siga extendiéndose, actualizamos el pico
-            if (ang >= picoMaximo) {
-              picoMaximo = ang;
-            } else {
-              // Si el ángulo empieza a disminuir (ang < picoMaximo), 
-              // significa que el brazo ya alcanzó su máxima extensión.
-              // DETENEMOS EL RELOJ AQUÍ.
-              finalizarGolpe(picoMaximo);
-            }
+            if (ang >= picoMaximo) picoMaximo = ang;
+            else finalizarGolpe(picoMaximo);
           }
         }
-        ultimoAngulo = ang;
       }
       canvasCtx.restore();
     });
 
     function finalizarGolpe(maxExt) {
-      const t_final = performance.now();
-      const duracion = (t_final - t_inicio) / 1000;
-      
+      const duracion = (performance.now() - t_inicio) / 1000;
       buscandoPico = false;
       modo = "PAUSA";
-      
       registros.push({ tiempo: duracion, extension: maxExt });
       
-      // Feedback semáforo
       if (duracion < 0.75) {
-        statusText.style.background = "#28a745";
-        statusText.innerText = `EXCELENTE! ${duracion.toFixed(3)}s`;
+        statusText.style.background = "#28a745"; statusText.innerText = `EXCELENTE! ${duracion.toFixed(3)}s`;
       } else if (duracion <= 0.99) {
         statusText.style.background = "#ffc107"; statusText.style.color = "#000";
         statusText.innerText = `BIEN: ${duracion.toFixed(3)}s`;
       } else {
-        statusText.style.background = "#dc3545";
-        statusText.innerText = `MUY LENTO: ${duracion.toFixed(3)}s`;
+        statusText.style.background = "#dc3545"; statusText.innerText = `MUY LENTO: ${duracion.toFixed(3)}s`;
       }
 
-      counterText.innerText = `PROGRESO: ${registros.length} / 10`;
-      if (registros.length < 10) setTimeout(esperaAleatoria, 3500);
+      counterText.innerText = `GOLPES: ${registros.length} / 10`;
+      if (registros.length < 10) setTimeout(esperaAleatoria, 2500);
       else mostrarReporte();
     }
 
@@ -188,21 +198,12 @@
       modo = "FIN";
       const avgT = (registros.reduce((a, b) => a + b.tiempo, 0) / 10).toFixed(3);
       const maxE = Math.max(...registros.map(r => r.extension)).toFixed(1);
-      
       document.getElementById('stats-summary').innerHTML = `
-        <h1 style="color:#FFD700; font-size:48px; margin:0;">${avgT}s</h1>
-        <p style="margin:5px 0;">PROMEDIO DE REACCIÓN TOTAL</p>
-        <p style="color:#00E5FF;">MÁXIMA EXTENSIÓN ALCANZADA: ${maxE}°</p>
-      `;
-
+        <h2 style="color:#FFD700; margin:0;">${avgT}s</h2>
+        <p style="margin:2px 0; font-size:12px;">PROMEDIO | MÁX EXT: ${maxE}°</p>`;
       let html = "";
       registros.forEach((r, i) => {
-        html += `
-          <div class="stat-card">
-            <span>GOLPE ${i+1}</span>
-            <span style="color:#FFD700; font-weight:bold;">${r.tiempo.toFixed(3)}s</span>
-            <span>Extensión: ${Math.round(r.extension)}°</span>
-          </div>`;
+        html += `<div class="stat-card"><span>#${i+1}</span><span style="color:#FFD700; font-weight:bold;">${r.tiempo.toFixed(3)}s</span><span>${Math.round(r.extension)}°</span></div>`;
       });
       document.getElementById('stats-list').innerHTML = html;
       document.getElementById('results-panel').style.display = "block";
@@ -217,20 +218,23 @@
           modo = "ATAQUE";
           t_inicio = performance.now();
           playBuzzer();
-          statusText.innerText = "¡YA!";
-          statusText.style.background = "#f00";
+          statusText.innerText = "¡YA!"; statusText.style.background = "#f00";
         }
       }, Math.random() * 3000 + 2000);
     }
 
     async function activarCamara() {
-      const cam = new Camera(videoElement, {
+      modo = "CARGANDO";
+      const camConfig = {
         onFrame: async () => { await pose.send({image: videoElement}); },
+        facingMode: facingMode, // Aquí se aplica la selección del usuario
         width: 640, height: 480
-      });
-      await cam.start();
+      };
+      cameraInstance = new Camera(videoElement, camConfig);
+      await cameraInstance.start();
       document.getElementById('btn-camera').style.display = "none";
       document.getElementById('btn-start-serie').style.display = "block";
+      counterText.innerText = "CÁMARA LISTA";
     }
 
     function iniciarSerie() {
