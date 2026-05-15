@@ -3,66 +3,85 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI - Selector de Brazo</title>
+  <title>Senshi-React AI v2.5 - Audio & Lateral</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
 
   <style>
-    body { margin: 0; background: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    #header-app { padding: 10px; background: #111; border-bottom: 2px solid #FFD700; display: flex; justify-content: space-between; align-items: center; }
-    #status-display { font-size: 18px; font-weight: bold; flex-grow: 1; text-align: center; }
-    #main-view { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; background: #000; }
+    body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    
+    /* Botones Superpuestos */
+    #top-controls {
+      position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 10px;
+    }
+    .btn-row { display: flex; gap: 10px; }
+    
+    #status-display { 
+      background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border-left: 5px solid #FFD700;
+      font-size: 20px; font-weight: bold; text-align: center; flex-grow: 1;
+    }
+
+    #main-view { position: relative; flex-grow: 1; background: #000; display: flex; align-items: center; justify-content: center; }
     #output_canvas { max-width: 100%; max-height: 100%; transform: scaleX(-1); }
     
-    /* Selector de Brazo */
-    #arm-selector {
-      position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 8px; z-index: 150;
+    #debug-info { 
+      position: absolute; bottom: 100px; left: 20px; background: rgba(0,0,0,0.7); 
+      padding: 10px; border-radius: 5px; font-family: monospace; color: #0f0; border: 1px solid #333;
     }
+
+    #arm-selector { display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 8px; }
     .arm-btn {
-      padding: 8px 15px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;
+      padding: 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;
     }
     .arm-btn.active { background: #FFD700; color: #000; }
 
-    #debug-info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px; font-family: monospace; font-size: 12px; color: #0f0; pointer-events: none; }
-    #results-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 3px solid #FFD700; border-radius: 15px; padding: 25px; display: none; z-index: 200; width: 80%; text-align: center; }
-    #footer-controls { padding: 15px; background: #111; display: flex; flex-direction: column; gap: 8px; }
-    button { padding: 18px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; text-transform: uppercase; }
-    .btn-main { background: #FFD700; color: #000; }
-    .btn-action { background: #fff; color: #000; display: none; }
-    #series-counter { text-align: center; color: #FFD700; font-size: 14px; }
+    button.action-btn { 
+      padding: 15px; font-size: 14px; font-weight: bold; border: none; border-radius: 8px; 
+      text-transform: uppercase; cursor: pointer; flex: 1;
+    }
+    .btn-camera { background: #FFD700; color: #000; }
+    .btn-start { background: #fff; color: #000; display: none; }
+
+    #results-panel { 
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+      background: rgba(0,0,0,0.95); border: 3px solid #FFD700; border-radius: 15px; 
+      padding: 30px; display: none; z-index: 400; width: 85%; text-align: center; 
+    }
+    #series-counter { position: absolute; bottom: 30px; width: 100%; text-align: center; font-weight: bold; color: #FFD700; text-shadow: 2px 2px 4px #000; }
     #input_video { display: none; }
   </style>
 </head>
 <body>
 
-  <div id="header-app">
-    <div id="status-display">CONFIGURAR ENTRENAMIENTO</div>
+  <div id="top-controls">
+    <div class="btn-row">
+        <div id="status-display">SISTEMA LISTO</div>
+        <div id="arm-selector">
+            <div id="btn-left" class="arm-btn" onclick="selectArm('L')">IZQ</div>
+            <div id="btn-right" class="arm-btn active" onclick="selectArm('R')">DER</div>
+        </div>
+    </div>
+    <div class="btn-row">
+        <button id="btn-camera" class="action-btn btn-camera" onclick="activarCamara()">1. CONECTAR CÁMARA</button>
+        <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. INICIAR 10 GOLPES</button>
+    </div>
   </div>
   
   <div id="main-view">
-    <div id="arm-selector">
-      <div id="btn-left" class="arm-btn" onclick="selectArm('L')">BRAZO IZQ</div>
-      <div id="btn-right" class="arm-btn active" onclick="selectArm('R')">BRAZO DER</div>
-    </div>
-
     <video id="input_video" playsinline muted></video>
     <canvas id="output_canvas"></canvas>
-    <div id="debug-info">ANGULO: --</div>
+    <div id="debug-info">CALIBRANDO...</div>
     
     <div id="results-panel">
-      <h2 style="color:#FFD700;">SERIE FINALIZADA</h2>
+      <h2 style="color:#FFD700; margin:0;">RESULTADOS DE SERIE</h2>
       <div id="stats-content"></div>
-      <button class="btn-main" onclick="location.reload()" style="width:100%; margin-top:15px;">NUEVA SESIÓN</button>
+      <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%; margin-top:20px;">REPETIR SESIÓN</button>
     </div>
   </div>
 
-  <div id="footer-controls">
-    <div id="series-counter">LISTO</div>
-    <button id="btn-camera" class="btn-main" onclick="activarCamara()">1. ENCENDER CÁMARA</button>
-    <button id="btn-start-serie" class="btn-action" onclick="iniciarSerie()">2. INICIAR 10 GOLPES</button>
-  </div>
+  <div id="series-counter">PROGRESO: 0 / 10</div>
 
   <script>
     const videoElement = document.getElementById('input_video');
@@ -73,9 +92,24 @@
     const counterText = document.getElementById('series-counter');
 
     let modo = "OFF"; 
-    let selectedArm = "R"; // Por defecto Derecho
+    let selectedArm = "R";
     let t_inicio = 0;
     let registros = [];
+
+    // Configuración de Audio
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep() {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = "sine";
+        osc.frequency.value = 880; // Tono agudo y claro
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.stop(audioCtx.currentTime + 0.2);
+    }
 
     const pose = new Pose({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
@@ -105,27 +139,38 @@
       canvasCtx.drawImage(res.image, 0, 0, canvasElement.width, canvasElement.height);
       
       if (res.poseLandmarks) {
-        // Solo dibujamos el brazo seleccionado para evitar distracciones
         const landmarks = res.poseLandmarks;
-        const colorTrack = selectedArm === 'R' ? '#FFD700' : '#00E5FF';
-        
-        let currentAngle = 0;
+        let cAngle = 0;
+        let points = [];
+
         if (selectedArm === 'R') {
-            currentAngle = calcAng(landmarks[12], landmarks[14], landmarks[16]);
-            drawLandmarks(canvasCtx, [landmarks[12], landmarks[14], landmarks[16]], {color: colorTrack, lineWidth: 2});
+            cAngle = calcAng(landmarks[12], landmarks[14], landmarks[16]);
+            points = [12, 14, 16];
         } else {
-            currentAngle = calcAng(landmarks[11], landmarks[13], landmarks[15]);
-            drawLandmarks(canvasCtx, [landmarks[11], landmarks[13], landmarks[15]], {color: colorTrack, lineWidth: 2});
+            cAngle = calcAng(landmarks[11], landmarks[13], landmarks[15]);
+            points = [11, 13, 15];
         }
+
+        // Dibujar Conectores y Nodos
+        const colorMain = selectedArm === 'R' ? '#FFD700' : '#00E5FF';
         
-        debugText.innerText = `BRAZO ${selectedArm === 'R' ? 'DER' : 'IZQ'}: ${Math.round(currentAngle)}° | MODO: ${modo}`;
+        // Dibujamos líneas manualmente para asegurar visibilidad
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(landmarks[points[0]].x * canvasElement.width, landmarks[points[0]].y * canvasElement.height);
+        canvasCtx.lineTo(landmarks[points[1]].x * canvasElement.width, landmarks[points[1]].y * canvasElement.height);
+        canvasCtx.lineTo(landmarks[points[2]].x * canvasElement.width, landmarks[points[2]].y * canvasElement.height);
+        canvasCtx.strokeStyle = "white";
+        canvasCtx.lineWidth = 4;
+        canvasCtx.stroke();
+
+        drawLandmarks(canvasCtx, [landmarks[points[0]], landmarks[points[1]], landmarks[points[2]]], {color: colorMain, lineWidth: 2});
+        
+        debugText.innerText = `ÁNGULO ACTUAL: ${Math.round(cAngle)}°`;
 
         if (modo === "ATAQUE") {
           const t_actual = performance.now();
           const lapso = t_actual - t_inicio;
-          
-          // Mantenemos 160° como base de éxito tras tu prueba anterior
-          if (currentAngle > 160 && lapso > 100) {
+          if (cAngle > 165 && lapso > 100) { // Subí a 165 para mayor exigencia técnica
             marcarHit(lapso);
           }
         }
@@ -137,11 +182,13 @@
       modo = "PAUSA";
       const segs = tiempo / 1000;
       registros.push(segs);
-      statusText.innerText = `¡GOLPE! ${segs.toFixed(3)}s`;
-      counterText.innerText = `GOLPES: ${registros.length} / 10`;
+      statusText.innerText = `¡EXCELENTE! ${segs.toFixed(3)}s`;
+      statusText.style.background = "#FFD700";
+      statusText.style.color = "#000";
+      counterText.innerText = `PROGRESO: ${registros.length} / 10`;
 
       if (registros.length < 10) {
-        setTimeout(esperaAleatoria, 2000);
+        setTimeout(esperaAleatoria, 2500);
       } else {
         mostrarResultados();
       }
@@ -154,11 +201,11 @@
       const max = Math.max(...registros).toFixed(3);
       
       document.getElementById('stats-content').innerHTML = `
-        <h1 style="color:#FFD700; font-size:48px; margin:10px 0;">${avg}s</h1>
-        <p style="color:#888;">PROMEDIO DE REACCIÓN</p>
-        <div style="display:flex; justify-content:space-around; margin-top:20px; font-weight:bold;">
-            <div>MIN: ${min}s</div>
-            <div>MAX: ${max}s</div>
+        <h1 style="color:#FFD700; font-size:60px; margin:10px 0;">${avg}s</h1>
+        <p style="letter-spacing:2px;">PROMEDIO DE REACCIÓN</p>
+        <div style="display:flex; justify-content:space-around; margin-top:20px; font-size:18px;">
+            <div style="color:#0f0">MIN: ${min}s</div>
+            <div style="color:#f00">MAX: ${max}s</div>
         </div>
       `;
       document.getElementById('results-panel').style.display = "block";
@@ -168,18 +215,20 @@
     function esperaAleatoria() {
       modo = "ESPERA";
       statusText.innerText = "¡EN GUARDIA!";
-      statusText.style.background = "#111";
+      statusText.style.background = "rgba(0,0,0,0.8)";
       statusText.style.color = "#FFD700";
       
+      const randomTime = Math.random() * 3000 + 2000;
       setTimeout(() => {
         if(modo === "ESPERA") {
             modo = "ATAQUE";
             t_inicio = performance.now();
+            playBeep(); // ESTÍMULO AUDITIVO
             statusText.innerText = "¡GOLPEA!";
             statusText.style.background = "#FF0000";
             statusText.style.color = "#fff";
         }
-      }, Math.random() * 3000 + 2000);
+      }, randomTime);
     }
 
     async function activarCamara() {
@@ -190,12 +239,14 @@
       await cam.start();
       document.getElementById('btn-camera').style.display = "none";
       document.getElementById('btn-start-serie').style.display = "block";
-      statusText.innerText = "CÁMARA CONECTADA";
+      statusText.innerText = "CÁMARA OK";
     }
 
     function iniciarSerie() {
       registros = [];
       document.getElementById('results-panel').style.display = "none";
+      // Activamos el contexto de audio (necesario por seguridad del navegador)
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       esperaAleatoria();
     }
   </script>
