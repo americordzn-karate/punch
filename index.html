@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI v1.0 - Análisis de Tsuki</title>
+  <title>Senshi-React AI v5.0 - Biomechanical Edition</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -12,25 +12,27 @@
 
   <style>
     body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    #top-controls { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
-    .btn-row { display: flex; gap: 8px; }
-    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 18px; font-weight: bold; text-align: center; flex-grow: 2; text-transform: uppercase; }
-    .selector-group { display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.8); padding: 4px; border-radius: 8px; border: 1px solid #444; }
-    .opt-btn { padding: 6px 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 9px; font-weight: bold; cursor: pointer; text-align: center; }
+    #top-controls { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 6px; }
+    .btn-row { display: flex; gap: 6px; }
+    #status-display { background: rgba(30,30,30,0.95); padding: 12px; border-radius: 10px; border: 3px solid #FFD700; font-size: 16px; font-weight: bold; text-align: center; flex-grow: 2; text-transform: uppercase; }
+    .selector-group { display: flex; flex-direction: column; gap: 3px; background: rgba(0,0,0,0.8); padding: 4px; border-radius: 8px; border: 1px solid #444; }
+    .opt-btn { padding: 4px 8px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 9px; font-weight: bold; cursor: pointer; text-align: center; white-space: nowrap; }
     .opt-btn.active { background: #FFD700; color: #000; }
-    .config-box { background: rgba(0,0,0,0.85); padding: 8px; border-radius: 10px; border: 1px solid #FFD700; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; gap: 5px; }
+    .config-box { background: rgba(0,0,0,0.85); padding: 6px; border-radius: 10px; border: 1px solid #FFD700; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; gap: 5px; }
     .input-field { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: bold; color: #FFD700; }
-    input { width: 45px; padding: 4px; border-radius: 4px; border: 1px solid #FFD700; background: #000; color: #FFD700; text-align: center; }
+    input { width: 42px; padding: 4px; border-radius: 4px; border: 1px solid #FFD700; background: #000; color: #FFD700; text-align: center; }
     #main-view { position: relative; flex-grow: 1; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     #output_canvas { max-width: 100%; max-height: 100%; }
     .mirror { transform: scaleX(-1); }
-    button.action-btn { padding: 15px; font-size: 13px; font-weight: bold; border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer; flex: 1; }
+    button.action-btn { padding: 12px; font-size: 12px; font-weight: bold; border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer; flex: 1; }
     .btn-camera { background: #FFD700; color: #000; }
     .btn-start { background: #fff; color: #000; display: none; }
     #results-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; z-index: 500; overflow-y: auto; padding: 15px; box-sizing: border-box; border-top: 5px solid #FFD700; }
-    .chart-container { background: #111; border-radius: 10px; padding: 10px; margin: 10px 0; border: 1px solid #333; height: 230px; }
+    .chart-container { background: #111; border-radius: 10px; padding: 10px; margin: 10px 0; border: 1px solid #333; height: 200px; }
     .stat-grid { display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 20px; }
-    .stat-card { background: #1a1a1a; padding: 10px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 10px; display: grid; grid-template-columns: 0.5fr 1fr 1fr 1.2fr 1fr; align-items: center; text-align: center; }
+    .stat-card { background: #1a1a1a; padding: 8px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 9px; display: grid; align-items: center; text-align: center; }
+    .grid-vel { grid-template-columns: 0.5fr 1fr 1fr 1.2fr 1fr; }
+    .grid-bio { grid-template-columns: 0.4fr 1fr 1fr 1fr 1fr 1fr 1fr; }
     .best-hit { background: #064e3b !important; border-left: 4px solid #10b981 !important; }
     .worst-hit { background: #7f1d1d !important; border-left: 4px solid #ef4444 !important; }
     #input_video { display: none; }
@@ -40,7 +42,11 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">ANÁLISIS DE TSUKI</div>
+        <div id="status-display">SENSHI-FORM V5.0</div>
+        <div class="selector-group">
+            <div id="btn-mode-vel" class="opt-btn active" onclick="switchModoEvaluacion('VELOCIDAD')">M. VELOCIDAD</div>
+            <div id="btn-mode-bio" class="opt-btn" onclick="switchModoEvaluacion('BIOMECANICO')">M. BIOMECÁNICO</div>
+        </div>
         <div class="selector-group">
             <div id="btn-cam-front" class="opt-btn active" onclick="switchCam('user')">FRONT</div>
             <div id="btn-cam-back" class="opt-btn" onclick="switchCam('environment')">BACK</div>
@@ -63,12 +69,10 @@
     <canvas id="output_canvas" class="mirror"></canvas>
     
     <div id="results-panel">
-      <h3 style="color:#FFD700; text-align:center; margin:0;">REPORTE DE RENDIMIENTO</h3>
+      <h3 id="report-title" style="color:#FFD700; text-align:center; margin:0;">REPORTE DE RENDIMIENTO</h3>
       <div id="res-promedios" style="text-align:center; font-size:11px; margin:8px 0; color:#ddd;"></div>
       <div class="chart-container"><canvas id="performanceChart"></canvas></div>
-      <div style="font-size: 8px; color: #FFD700; display: grid; grid-template-columns: 0.5fr 1fr 1fr 1.2fr 1fr; text-align: center; margin-bottom: 5px; font-weight: bold; text-transform: uppercase;">
-          <span>#</span><span>TIEMPO</span><span>DIST.</span><span>VELOCIDAD</span><span>FUERZA</span>
-      </div>
+      <div id="table-header" style="font-size: 8px; color: #FFD700; display: grid; text-align: center; margin-bottom: 5px; font-weight: bold; text-transform: uppercase;"></div>
       <div id="stats-list" class="stat-grid"></div>
       <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%;">NUEVA SESIÓN</button>
     </div>
@@ -80,8 +84,16 @@
     const canvasCtx = canvasElement.getContext('2d');
     const statusText = document.getElementById('status-display');
 
-    let modo = "OFF", selectedArm = "R", facingMode = "user", registros = [], myChart = null;
-    let pxPorCm = 0, posInicialPuño = null, buscandoPico = false, picoMaximo = 0, t_inicio = 0, currentWrist = {x:0, y:0};
+    let modo = "OFF", evalMode = "VELOCIDAD", selectedArm = "R", facingMode = "user", registros = [], myChart = null;
+    let pxPorCm = 0, posInicialPuño = null, buscandoPico = false, picoMaximo = 0, t_inicio = 0;
+    
+    // Nodos globales actuales para tracking en tiempo real
+    let currentLandmarks = null;
+
+    // Estructuras de Calibración Dinámica al momento del Buzzer
+    let calibracionBuzzer = {
+        pieApoyoX: 0, pieAtaqueX: 0, rodillaY: 0, distCaderaBase: 1, distHombroBase: 1
+    };
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playAudio(freq, dur, type="sawtooth") {
@@ -97,6 +109,14 @@
 
     const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
     pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+
+    function switchModoEvaluacion(mode) {
+        if (modo !== "OFF") return;
+        evalMode = mode;
+        document.getElementById('btn-mode-vel').classList.toggle('active', mode === 'VELOCIDAD');
+        document.getElementById('btn-mode-bio').classList.toggle('active', mode === 'BIOMECANICO');
+        statusText.innerText = `SENSHI-${mode === 'VELOCIDAD' ? 'REACT' : 'FORM'} V5.0`;
+    }
 
     function switchCam(mode) {
       if (modo !== "OFF") return;
@@ -120,28 +140,76 @@
       canvasCtx.drawImage(res.image, 0, 0, canvasElement.width, canvasElement.height);
       
       if (res.poseLandmarks) {
-        const lm = res.poseLandmarks;
-        const p = (selectedArm === 'R') ? [12, 14, 16] : [11, 13, 15];
-        const hombro = lm[p[0]], codo = lm[p[1]], muñeca = lm[p[2]];
-        currentWrist = {x: muñeca.x, y: muñeca.y};
+        currentLandmarks = res.poseLandmarks;
+        const lm = currentLandmarks;
+        
+        // Nodos del brazo evaluado
+        const pArm = (selectedArm === 'R') ? [12, 14, 16] : [11, 13, 15];
+        const hombroAtaque = lm[pArm[0]], codoAtaque = lm[pArm[1]], muñecaAtaque = lm[pArm[2]];
 
-        pxPorCm = Math.hypot((muñeca.x - codo.x) * canvasElement.width, (muñeca.y - codo.y) * canvasElement.height) / parseFloat(document.getElementById('antebrazo-cm').value);
-        let ang = Math.abs((Math.atan2(muñeca.y - codo.y, muñeca.x - codo.x) - Math.atan2(hombro.y - codo.y, hombro.x - codo.x)) * 180 / Math.PI);
-        if (ang > 180) ang = 360 - ang;
+        pxPorCm = Math.hypot((muñecaAtaque.x - codoAtaque.x) * canvasElement.width, (muñecaAtaque.y - codoAtaque.y) * canvasElement.height) / parseFloat(document.getElementById('antebrazo-cm').value);
+        
+        let angArm = Math.abs((Math.atan2(muñecaAtaque.y - codoAtaque.y, muñecaAtaque.x - codoAtaque.x) - Math.atan2(hombroAtaque.y - codoAtaque.y, hombroAtaque.x - codoAtaque.x)) * 180 / Math.PI);
+        if (angArm > 180) angArm = 360 - angArm;
 
-        canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = "#00FF00";
-        canvasCtx.beginPath();
-        canvasCtx.moveTo(hombro.x * canvasElement.width, hombro.y * canvasElement.height);
-        canvasCtx.lineTo(codo.x * canvasElement.width, codo.y * canvasElement.height);
-        canvasCtx.lineTo(muñeca.x * canvasElement.width, muñeca.y * canvasElement.height);
-        canvasCtx.stroke();
-        drawLandmarks(canvasCtx, [hombro, codo, muñeca], {color: "#FFF", lineWidth: 2});
+        // Renderizado según modo de evaluación seleccionado
+        if (evalMode === "VELOCIDAD") {
+            // Dibujar solo brazo de ataque (Blanco/Verde tradicional)
+            canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = "#00FF00";
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(hombroAtaque.x * canvasElement.width, hombroAtaque.y * canvasElement.height);
+            canvasCtx.lineTo(codoAtaque.x * canvasElement.width, codoAtaque.y * canvasElement.height);
+            canvasCtx.lineTo(muñecaAtaque.x * canvasElement.width, muñecaAtaque.y * canvasElement.height);
+            canvasCtx.stroke();
+            drawLandmarks(canvasCtx, [hombroAtaque, codoAtaque, muñecaAtaque], {color: "#FFF", lineWidth: 2});
+        } 
+        else if (evalMode === "BIOMECANICO") {
+            // Renderizado Inteligente con paleta estricta: Amarillo (Der) vs Blanco (Izq)
+            const nodeColor = (idx) => [11,13,15,23,25,27,29,31].includes(idx) ? "#FFFFFF" : "#FFD700";
+            const lineColor = (idx1) => [11,13,23,25,27,29].includes(idx1) ? "#FFFFFF" : "#FFD700";
+
+            // Estructuras a dibujar en el modo de forma
+            const conexionesBio = [
+                [11, 12], [23, 24], // Líneas transversales (Hombros y Caderas)
+                [11, 23], [12, 24], // Conexiones laterales Tronco
+                [23, 25], [24, 26], // Caderas a Rodillas
+                [25, 27], [26, 28], // Rodillas a Tobillos
+                [27, 31], [28, 32]  // Tobillos a Puntas de pie
+            ];
+
+            conexionesBio.forEach(([i, j]) => {
+                canvasCtx.lineWidth = 3;
+                canvasCtx.strokeStyle = lineColor(i);
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(lm[i].x * canvasElement.width, lm[i].y * canvasElement.height);
+                canvasCtx.lineTo(lm[j].x * canvasElement.width, lm[j].y * canvasElement.height);
+                canvasCtx.stroke();
+            });
+
+            // Dibujar Brazo de Ataque en su correspondiente color
+            canvasCtx.lineWidth = 4;
+            canvasCtx.strokeStyle = nodeColor(pArm[0]);
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(hombroAtaque.x * canvasElement.width, hombroAtaque.y * canvasElement.height);
+            canvasCtx.lineTo(codoAtaque.x * canvasElement.width, codoAtaque.y * canvasElement.height);
+            canvasCtx.lineTo(muñecaAtaque.x * canvasElement.width, muñecaAtaque.y * canvasElement.height);
+            canvasCtx.stroke();
+
+            // Dibujar círculos en nodos específicos requeridos
+            const nodosRequeridos = [11, 12, 23, 24, 25, 26, 31, 32, pArm[1], pArm[2]];
+            nodosRequeridos.forEach(idx => {
+                canvasCtx.fillStyle = nodeColor(idx);
+                canvasCtx.beginPath();
+                canvasCtx.arc(lm[idx].x * canvasElement.width, lm[idx].y * canvasElement.height, 5, 0, 2 * Math.PI);
+                canvasCtx.fill();
+            });
+        }
 
         if (modo === "ATAQUE") {
-          if (!buscandoPico && ang > 160) { buscandoPico = true; picoMaximo = ang; }
+          if (!buscandoPico && angArm > 160) { buscandoPico = true; picoMaximo = angArm; }
           if (buscandoPico) {
-            if (ang >= picoMaximo) picoMaximo = ang;
-            else finalizarGolpe(picoMaximo, muñeca);
+            if (angArm >= picoMaximo) picoMaximo = angArm;
+            else finalizarGolpe(picoMaximo, muñecaAtaque);
           }
         }
       }
@@ -154,16 +222,51 @@
       const vMs = (dCm / 100) / dur;
       const vKmh = vMs * 3.6;
       
-      // --- FÍSICA CORREGIDA (Teoría del Impulso) ---
       const masaCuerpo = parseFloat(document.getElementById('peso-kg').value);
-      const masaEfectiva = masaCuerpo * 0.06; // Incrementado al 6% considerando torque de hombro/cadera
-      const tiempoChoque = 0.08; // 80ms de tiempo de impacto estimado para Karate
+      const masaEfectiva = masaCuerpo * 0.06; 
+      const tiempoChoque = 0.08; 
       const fuerzaNewtons = (masaEfectiva * vMs) / tiempoChoque;
       const fuerzaKg = fuerzaNewtons / 9.81;
 
+      // Métricas Biomecánicas
+      let bioData = { avancePieApoyo: 0, avancePieAtaque: 0, bajaRodilla: 0, rotCadera: 0, rotHombro: 0 };
+
+      if (evalMode === "BIOMECANICO" && currentLandmarks) {
+          const lm = currentLandmarks;
+          const esDerecho = (selectedArm === "R");
+          
+          // Mapeo dinámico de nodos según guardia
+          const idxPieAtaque = esDerecho ? 32 : 31; // Lado del brazo ejecutor (trasero en Gyaku)
+          const idxPieApoyo = esDerecho ? 31 : 32;  // Lado opuesto (adelantado)
+          const idxRodillaAtaque = esDerecho ? 26 : 25;
+
+          // 1 y 2. Avances de los pies en cm (Absolutos respecto al buzzer)
+          bioData.avancePieApoyo = Math.abs(lm[idxPieApoyo].x - calibracionBuzzer.pieApoyoX) * canvasElement.width / pxPorCm;
+          bioData.avancePieAtaque = Math.abs(lm[idxPieAtaque].x - calibracionBuzzer.pieAtaqueX) * canvasElement.width / pxPorCm;
+
+          // 3. Cuánto baja la rodilla del mismo lado (eje Y invertido para convertir descenso a positivo)
+          const deltaYRodilla = (lm[idxRodillaAtaque].y - calibracionBuzzer.rodillaY) * canvasElement.height / pxPorCm;
+          bioData.bajaRodilla = deltaYRodilla > 0 ? deltaYRodilla : 0;
+
+          // 4 y 5. Modelado Tridimensional del Factor de Compresión de Rotación Lateral
+          const distCaderaActual = Math.abs(lm[23].x - lm[24].x);
+          const distHombroActual = Math.abs(lm[11].x - lm[12].x);
+
+          // Relación de compresión respecto a la firma inicial: cuando tiende a cerrarse, el ángulo incrementa
+          let ratioCadera = Math.min(distCaderaActual / calibracionBuzzer.distCaderaBase, 1);
+          let ratioHombro = Math.min(distHombroActual / calibracionBuzzer.distHombroBase, 1);
+
+          bioData.rotCadera = Math.acos(ratioCadera) * (180 / Math.PI);
+          bioData.rotHombro = Math.acos(ratioHombro) * (180 / Math.PI);
+      }
+
       playAudio(1000, 0.15, "sine"); 
       buscandoPico = false; modo = "PAUSA";
-      registros.push({ tiempo: dur, kmh: vKmh, distancia: dCm, fuerza: fuerzaKg });
+      
+      registros.push({ 
+          tiempo: dur, kmh: vKmh, distancia: dCm, fuerza: fuerzaKg, 
+          bio: bioData, modoRegistro: evalMode 
+      });
       
       if (dur < 0.75) { statusText.style.background = "#28a745"; statusText.innerText = `EXCELENTE: ${dur.toFixed(2)}s`; }
       else if (dur <= 0.99) { statusText.style.background = "#ffc107"; statusText.innerText = `BIEN: ${dur.toFixed(2)}s`; }
@@ -179,6 +282,7 @@
     function mostrarResultadosFinales() {
       modo = "FIN";
       document.getElementById('results-panel').style.display = "block";
+      document.getElementById('report-title').innerText = `REPORTE - MODO ${evalMode}`;
       
       let bestIdx = 0, worstIdx = 0;
       let minScore = Infinity, maxScore = -Infinity;
@@ -193,6 +297,7 @@
       const avgF = (registros.reduce((a, b) => a + b.fuerza, 0) / 10).toFixed(1);
       document.getElementById('res-promedios').innerHTML = `PROMEDIO: ${avgK} km/h | IMPACTO MEDIO: ${avgF} kg-f`;
 
+      // Render de la gráfica unificada (Tiempo y Velocidad)
       const ctx = document.getElementById('performanceChart').getContext('2d');
       if (myChart) myChart.destroy();
       myChart = new Chart(ctx, {
@@ -214,17 +319,44 @@
         }
       });
 
+      // Adaptación dinámica de la cabecera de la tabla y contenido
+      const header = document.getElementById('table-header');
+      const listContainer = document.getElementById('stats-list');
       let html = "";
-      registros.forEach((r, i) => {
-        let extraClass = (i === bestIdx) ? "best-hit" : (i === worstIdx ? "worst-hit" : "");
-        html += `<div class="stat-card ${extraClass}">
-            <span>${i+1}</span><span>${r.tiempo.toFixed(3)}s</span>
-            <span>${r.distancia.toFixed(0)}cm</span>
-            <span style="color:#FFD700">${r.kmh.toFixed(1)} km/h</span>
-            <span style="font-weight:bold; color:#0f0">${r.fuerza.toFixed(1)} kg</span>
-        </div>`;
-      });
-      document.getElementById('stats-list').innerHTML = html;
+
+      if (evalMode === "VELOCIDAD") {
+          header.className = "grid-vel";
+          header.style.display = "grid";
+          header.innerHTML = `<span>#</span><span>TIEMPO</span><span>DIST.</span><span>VELOCIDAD</span><span>FUERZA</span>`;
+          
+          registros.forEach((r, i) => {
+            let extraClass = (i === bestIdx) ? "best-hit" : (i === worstIdx ? "worst-hit" : "");
+            html += `<div class="stat-card grid-vel ${extraClass}">
+                <span>${i+1}</span><span>${r.tiempo.toFixed(3)}s</span>
+                <span>${r.distancia.toFixed(0)}cm</span>
+                <span style="color:#FFD700">${r.kmh.toFixed(1)} km/h</span>
+                <span style="font-weight:bold; color:#0f0">${r.fuerza.toFixed(1)} kg</span>
+            </div>`;
+          });
+      } else {
+          header.className = "grid-bio";
+          header.style.display = "grid";
+          header.innerHTML = `<span>#</span><span>TIEMPO</span><span>VEL.</span><span>AV. APOYO</span><span>AV. ATAQUE</span><span>F. RODILLA</span><span>ROT. CAD / HOM</span>`;
+          
+          registros.forEach((r, i) => {
+            let extraClass = (i === bestIdx) ? "best-hit" : (i === worstIdx ? "worst-hit" : "");
+            html += `<div class="stat-card grid-bio ${extraClass}">
+                <span>${i+1}</span>
+                <span>${r.tiempo.toFixed(2)}s</span>
+                <span style="color:#FFD700">${r.kmh.toFixed(1)}k/h</span>
+                <span>${r.bio.avancePieApoyo.toFixed(0)}cm</span>
+                <span>${r.bio.avancePieAtaque.toFixed(0)}cm</span>
+                <span style="color:#38bdf8">${r.bio.bajaRodilla.toFixed(0)}cm</span>
+                <span style="color:#a855f7; font-weight:bold;">${r.bio.rotCadera.toFixed(0)}° / ${r.bio.rotHombro.toFixed(0)}°</span>
+            </div>`;
+          });
+      }
+      listContainer.innerHTML = html;
     }
 
     function prepararAtleta() {
@@ -247,7 +379,22 @@
       modo = "ESPERA"; statusText.innerText = "¡EN GUARDIA!"; statusText.style.background = "#1a1a1a"; statusText.style.color = "#fff";
       setTimeout(() => {
         if(modo === "ESPERA") {
-          posInicialPuño = { x: currentWrist.x, y: currentWrist.y }; 
+          if (currentLandmarks) {
+              const lm = currentLandmarks;
+              const esDerecho = (selectedArm === "R");
+              
+              // 1. Calibración del Cero en el instante exacto del Buzzer
+              calibracionBuzzer.pieAtaqueX = lm[esDerecho ? 32 : 31].x; 
+              calibracionBuzzer.pieApoyoX = lm[esDerecho ? 31 : 32].x;
+              calibracionBuzzer.rodillaY = lm[esDerecho ? 26 : 25].y;
+
+              // Distancias relativas en la guardia base para cálculo trigonométrico de rotación
+              calibracionBuzzer.distCaderaBase = Math.abs(lm[23].x - lm[24].x) || 1;
+              calibracionBuzzer.distHombroBase = Math.abs(lm[11].x - lm[12].x) || 1;
+
+              posInicialPuño = { x: lm[esDerecho ? 16 : 15].x, y: lm[esDerecho ? 16 : 15].y }; 
+          }
+          
           modo = "ATAQUE"; t_inicio = performance.now();
           playAudio(160, 0.4, "sawtooth"); 
           statusText.innerText = "¡GOLPEA!"; statusText.style.background = "#f00";
