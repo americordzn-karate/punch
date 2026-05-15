@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-React AI v2.6 - Buzzer & Semáforo</title>
+  <title>Senshi-React AI v2.8 - Peak Precision</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -11,46 +11,20 @@
 
   <style>
     body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    
-    #top-controls {
-      position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 10px;
-    }
+    #top-controls { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 300; display: flex; flex-direction: column; gap: 10px; }
     .btn-row { display: flex; gap: 10px; }
-    
-    /* El recuadro dinámico */
-    #status-display { 
-      background: rgba(40,40,40,0.9); padding: 15px; border-radius: 10px; border: 3px solid #FFD700;
-      font-size: 22px; font-weight: bold; text-align: center; flex-grow: 1; transition: all 0.2s ease;
-      color: #fff; text-shadow: 1px 1px 2px #000;
-    }
-
+    #status-display { background: rgba(30,30,30,0.95); padding: 15px; border-radius: 10px; border: 3px solid #FFD700; font-size: 22px; font-weight: bold; text-align: center; flex-grow: 1; transition: all 0.1s ease; color: #fff; }
     #main-view { position: relative; flex-grow: 1; background: #000; display: flex; align-items: center; justify-content: center; }
     #output_canvas { max-width: 100%; max-height: 100%; transform: scaleX(-1); }
-    
-    #debug-info { 
-      position: absolute; bottom: 100px; left: 20px; background: rgba(0,0,0,0.7); 
-      padding: 10px; border-radius: 5px; font-family: monospace; color: #0f0; border: 1px solid #333; font-size: 14px;
-    }
-
-    #arm-selector { display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 8px; border: 1px solid #444; }
-    .arm-btn {
-      padding: 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;
-    }
+    #debug-info { position: absolute; bottom: 100px; left: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-family: monospace; color: #0f0; border: 1px solid #333; font-size: 16px; }
+    #arm-selector { display: flex; gap: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 8px; }
+    .arm-btn { padding: 10px; border: 1px solid #FFD700; background: #222; color: #FFD700; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; }
     .arm-btn.active { background: #FFD700; color: #000; }
-
-    button.action-btn { 
-      padding: 15px; font-size: 14px; font-weight: bold; border: none; border-radius: 8px; 
-      text-transform: uppercase; cursor: pointer; flex: 1; box-shadow: 0 4px 0 #999;
-    }
-    button.action-btn:active { transform: translateY(3px); box-shadow: none; }
-    .btn-camera { background: #FFD700; color: #000; box-shadow: 0 4px 0 #b39700; }
+    button.action-btn { padding: 15px; font-size: 14px; font-weight: bold; border: none; border-radius: 8px; text-transform: uppercase; cursor: pointer; flex: 1; }
+    .btn-camera { background: #FFD700; color: #000; }
     .btn-start { background: #fff; color: #000; display: none; }
-
-    #results-panel { 
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-      background: rgba(0,0,0,0.95); border: 3px solid #FFD700; border-radius: 15px; 
-      padding: 30px; display: none; z-index: 400; width: 85%; text-align: center; 
-    }
+    #results-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.98); border: 3px solid #FFD700; border-radius: 15px; padding: 25px; display: none; z-index: 400; width: 90%; text-align: center; max-height: 85vh; overflow-y: auto; }
+    .stat-card { background: #1a1a1a; padding: 12px; margin: 6px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #FFD700; }
     #series-counter { position: absolute; bottom: 30px; width: 100%; text-align: center; font-weight: bold; color: #FFD700; font-size: 18px; }
     #input_video { display: none; }
   </style>
@@ -59,31 +33,32 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">SISTEMA INICIALIZADO</div>
+        <div id="status-display">SISTEMA LISTO</div>
         <div id="arm-selector">
             <div id="btn-left" class="arm-btn" onclick="selectArm('L')">IZQ</div>
             <div id="btn-right" class="arm-btn active" onclick="selectArm('R')">DER</div>
         </div>
     </div>
     <div class="btn-row">
-        <button id="btn-camera" class="action-btn btn-camera" onclick="activarCamara()">1. ENCENDER CÁMARA</button>
-        <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. INICIAR SERIE (10)</button>
+        <button id="btn-camera" class="action-btn btn-camera" onclick="activarCamara()">1. CONECTAR CÁMARA</button>
+        <button id="btn-start-serie" class="action-btn btn-start" onclick="iniciarSerie()">2. COMENZAR SERIE</button>
     </div>
   </div>
   
   <div id="main-view">
     <video id="input_video" playsinline muted></video>
     <canvas id="output_canvas"></canvas>
-    <div id="debug-info">ÁNGULO: --</div>
+    <div id="debug-info">ANG: --</div>
     
     <div id="results-panel">
-      <h2 style="color:#FFD700; margin:0;">REPORTE FINAL</h2>
-      <div id="stats-content"></div>
-      <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%; margin-top:20px;">NUEVA SERIE</button>
+      <h2 style="color:#FFD700; margin-top:0;">REPORTE FINAL SENSHI-KAN</h2>
+      <div id="stats-summary" style="margin-bottom:20px;"></div>
+      <div id="stats-list"></div>
+      <button class="action-btn btn-camera" onclick="location.reload()" style="width:100%; margin-top:20px;">NUEVA SESIÓN</button>
     </div>
   </div>
 
-  <div id="series-counter">LISTO PARA LA PRUEBA</div>
+  <div id="series-counter">LISTO</div>
 
   <script>
     const videoElement = document.getElementById('input_video');
@@ -97,31 +72,23 @@
     let selectedArm = "R";
     let t_inicio = 0;
     let registros = [];
+    
+    // Lógica de Pico
+    let buscandoPico = false;
+    let picoMaximo = 0;
+    let ultimoAngulo = 0;
 
-    // Generador de Sonido de Chicharra (Buzzer)
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playBuzzer() {
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc1 = audioCtx.createOscillator();
-        const osc2 = audioCtx.createOscillator();
+        const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        
-        osc1.type = "sawtooth"; // Forma de onda áspera para chicharra
-        osc1.frequency.value = 150;
-        osc2.type = "square";
-        osc2.frequency.value = 155; // Desafinado para crear efecto "grit"
-
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(audioCtx.destination);
-        
-        gain.gain.setValueAtTime(0, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.05);
-        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
-        
-        osc1.start(); osc2.start();
-        osc1.stop(audioCtx.currentTime + 0.4);
-        osc2.stop(audioCtx.currentTime + 0.4);
+        osc.type = "sawtooth";
+        osc.frequency.value = 140;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
     }
 
     const pose = new Pose({
@@ -152,97 +119,106 @@
       canvasCtx.drawImage(res.image, 0, 0, canvasElement.width, canvasElement.height);
       
       if (res.poseLandmarks) {
-        const landmarks = res.poseLandmarks;
-        let cAngle = 0;
-        let p = [];
+        const lm = res.poseLandmarks;
+        let p = (selectedArm === 'R') ? [12, 14, 16] : [11, 13, 15];
+        let ang = calcAng(lm[p[0]], lm[p[1]], lm[p[2]]);
 
-        if (selectedArm === 'R') {
-            cAngle = calcAng(landmarks[12], landmarks[14], landmarks[16]);
-            p = [12, 14, 16];
-        } else {
-            cAngle = calcAng(landmarks[11], landmarks[13], landmarks[15]);
-            p = [11, 13, 15];
-        }
-
-        const colorTrack = selectedArm === 'R' ? '#FFD700' : '#00E5FF';
-        
-        // Dibujo de líneas y nodos
+        // Visualización
+        const color = selectedArm === 'R' ? '#FFD700' : '#00E5FF';
         canvasCtx.beginPath();
-        canvasCtx.moveTo(landmarks[p[0]].x * canvasElement.width, landmarks[p[0]].y * canvasElement.height);
-        canvasCtx.lineTo(landmarks[p[1]].x * canvasElement.width, landmarks[p[1]].y * canvasElement.height);
-        canvasCtx.lineTo(landmarks[p[2]].x * canvasElement.width, landmarks[p[2]].y * canvasElement.height);
-        canvasCtx.strokeStyle = "white";
-        canvasCtx.lineWidth = 5;
-        canvasCtx.stroke();
-
-        drawLandmarks(canvasCtx, [landmarks[p[0]], landmarks[p[1]], landmarks[p[2]]], {color: colorTrack, lineWidth: 2});
+        canvasCtx.moveTo(lm[p[0]].x * canvasElement.width, lm[p[0]].y * canvasElement.height);
+        canvasCtx.lineTo(lm[p[1]].x * canvasElement.width, lm[p[1]].y * canvasElement.height);
+        canvasCtx.lineTo(lm[p[2]].x * canvasElement.width, lm[p[2]].y * canvasElement.height);
+        canvasCtx.strokeStyle = "white"; canvasCtx.lineWidth = 4; canvasCtx.stroke();
+        drawLandmarks(canvasCtx, [lm[p[0]], lm[p[1]], lm[p[2]]], {color: color, lineWidth: 2});
         
-        debugText.innerText = `ÁNGULO ${selectedArm}: ${Math.round(cAngle)}°`;
+        debugText.innerText = `ÁNGULO ACTUAL: ${Math.round(ang)}°`;
 
         if (modo === "ATAQUE") {
-          const t_actual = performance.now();
-          const lapso = t_actual - t_inicio;
-          if (cAngle > 165 && lapso > 100) { 
-            evaluarGolpe(lapso);
+          // Si cruzamos el umbral de 165°, empezamos a buscar el pico
+          if (!buscandoPico && ang > 165) {
+            buscandoPico = true;
+            picoMaximo = ang;
+          }
+
+          if (buscandoPico) {
+            // Mientras el brazo siga extendiéndose, actualizamos el pico
+            if (ang >= picoMaximo) {
+              picoMaximo = ang;
+            } else {
+              // Si el ángulo empieza a disminuir (ang < picoMaximo), 
+              // significa que el brazo ya alcanzó su máxima extensión.
+              // DETENEMOS EL RELOJ AQUÍ.
+              finalizarGolpe(picoMaximo);
+            }
           }
         }
+        ultimoAngulo = ang;
       }
       canvasCtx.restore();
     });
 
-    function evaluarGolpe(tiempoMs) {
-      modo = "PAUSA";
-      const segs = tiempoMs / 1000;
-      registros.push(segs);
+    function finalizarGolpe(maxExt) {
+      const t_final = performance.now();
+      const duracion = (t_final - t_inicio) / 1000;
       
-      // Lógica de Colores y Mensajes
-      if (segs < 0.50) {
-        statusText.style.background = "#28a745"; // Verde
-        statusText.innerText = `EXCELENTE! ${segs.toFixed(3)}s`;
-      } else if (segs <= 0.70) {
-        statusText.style.background = "#ffc107"; // Amarillo
-        statusText.style.color = "#000";
-        statusText.innerText = `BIEN: ${segs.toFixed(3)}s`;
+      buscandoPico = false;
+      modo = "PAUSA";
+      
+      registros.push({ tiempo: duracion, extension: maxExt });
+      
+      // Feedback semáforo
+      if (duracion < 0.50) {
+        statusText.style.background = "#28a745";
+        statusText.innerText = `EXCELENTE! ${duracion.toFixed(3)}s`;
+      } else if (duracion <= 0.70) {
+        statusText.style.background = "#ffc107"; statusText.style.color = "#000";
+        statusText.innerText = `BIEN: ${duracion.toFixed(3)}s`;
       } else {
-        statusText.style.background = "#dc3545"; // Rojo
-        statusText.innerText = `MUY LENTO: ${segs.toFixed(3)}s`;
+        statusText.style.background = "#dc3545";
+        statusText.innerText = `MUY LENTO: ${duracion.toFixed(3)}s`;
       }
 
-      counterText.innerText = `GOLPES: ${registros.length} / 10`;
-
-      if (registros.length < 10) {
-        setTimeout(esperaAleatoria, 2500);
-      } else {
-        finalizarSerie();
-      }
+      counterText.innerText = `PROGRESO: ${registros.length} / 10`;
+      if (registros.length < 10) setTimeout(esperaAleatoria, 2500);
+      else mostrarReporte();
     }
 
-    function finalizarSerie() {
+    function mostrarReporte() {
       modo = "FIN";
-      const avg = (registros.reduce((a, b) => a + b, 0) / 10).toFixed(3);
-      const min = Math.min(...registros).toFixed(3);
+      const avgT = (registros.reduce((a, b) => a + b.tiempo, 0) / 10).toFixed(3);
+      const maxE = Math.max(...registros.map(r => r.extension)).toFixed(1);
       
-      document.getElementById('stats-content').innerHTML = `
-        <h1 style="color:#FFD700; font-size:60px; margin:10px 0;">${avg}s</h1>
-        <p>VELOCIDAD PROMEDIO</p>
-        <p style="color:#28a745">MEJOR TIEMPO: ${min}s</p>
+      document.getElementById('stats-summary').innerHTML = `
+        <h1 style="color:#FFD700; font-size:48px; margin:0;">${avgT}s</h1>
+        <p style="margin:5px 0;">PROMEDIO DE REACCIÓN TOTAL</p>
+        <p style="color:#00E5FF;">MÁXIMA EXTENSIÓN ALCANZADA: ${maxE}°</p>
       `;
+
+      let html = "";
+      registros.forEach((r, i) => {
+        html += `
+          <div class="stat-card">
+            <span>GOLPE ${i+1}</span>
+            <span style="color:#FFD700; font-weight:bold;">${r.tiempo.toFixed(3)}s</span>
+            <span>Extensión: ${Math.round(r.extension)}°</span>
+          </div>`;
+      });
+      document.getElementById('stats-list').innerHTML = html;
       document.getElementById('results-panel').style.display = "block";
     }
 
     function esperaAleatoria() {
       modo = "ESPERA";
-      statusText.style.background = "rgba(40,40,40,0.9)";
-      statusText.style.color = "#fff";
+      statusText.style.background = "#1a1a1a"; statusText.style.color = "#fff";
       statusText.innerText = "¡EN GUARDIA!";
-      
       setTimeout(() => {
         if(modo === "ESPERA") {
-            modo = "ATAQUE";
-            t_inicio = performance.now();
-            playBuzzer(); // DISPARO DE CHICHARRA
-            statusText.innerText = "¡GOLPEA!";
-            statusText.style.background = "#f00";
+          modo = "ATAQUE";
+          t_inicio = performance.now();
+          playBuzzer();
+          statusText.innerText = "¡YA!";
+          statusText.style.background = "#f00";
         }
       }, Math.random() * 3000 + 2000);
     }
