@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Senshi-React AI - Calibración Automática</title>
+  <title>Senshi-React AI - Calibración de Ángulo</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -47,19 +47,25 @@
     let tiempoEstimulo = 0;
     let tiempoReaccion = 0;
 
-    // Variables de Calibración Automática
-    let distanciaBase = 0;
-    let umbralDinamico = 0;
-
     const pose = new Pose({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
     });
 
     pose.setOptions({
       modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.6
     });
+
+    function calcularAngulo(A, B, C) {
+      let AB = { x: B.x - A.x, y: B.y - A.y, z: B.z - A.z };
+      let BC = { x: C.x - B.x, y: C.y - B.y, z: C.z - B.z };
+      let dotProduct = AB.x * BC.x + AB.y * BC.y + AB.z * BC.z;
+      let magnitudeAB = Math.sqrt(AB.x**2 + AB.y**2 + AB.z**2);
+      let magnitudeBC = Math.sqrt(BC.x**2 + BC.y**2 + BC.z**2);
+      let angle = Math.acos(dotProduct / (magnitudeAB * magnitudeBC));
+      return (angle * 180) / Math.PI;
+    }
 
     pose.onResults((results) => {
       canvasElement.width = videoElement.videoWidth;
@@ -73,23 +79,15 @@
         drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, {color: '#FFFFFF', lineWidth: 2});
         drawLandmarks(canvasCtx, landmarks, {color: '#FFD700', lineWidth: 1});
 
-        // Calculamos distancia Hombro-Muñeca actual
-        const dDer = Math.hypot(landmarks[12].x - landmarks[16].x, landmarks[12].y - landmarks[16].y);
-        const dIzq = Math.hypot(landmarks[11].x - landmarks[15].x, landmarks[11].y - landmarks[15].y);
-        const maxDist = Math.max(dDer, dIzq);
-
-        // EN GUARDIA: Guardamos la distancia en reposo
-        if (etapa === "PREPARANDO") {
-          distanciaBase = maxDist;
-          // El umbral es la distancia base + 30% de incremento
-          umbralDinamico = distanciaBase * 1.30;
-        }
-
-        // EN ESTIMULO: Esperamos que supere el umbral dinámico
         if (etapa === "ESTIMULO") {
-          const tiempoTranscurrido = performance.now() - tiempoEstimulo;
+          const ahora = performance.now();
+          const tiempoTranscurrido = ahora - tiempoEstimulo;
 
-          if (maxDist > umbralDinamico && tiempoTranscurrido > 150) {
+          const anguloDer = calcularAngulo(landmarks[12], landmarks[14], landmarks[16]);
+          const anguloIzq = calcularAngulo(landmarks[11], landmarks[13], landmarks[15]);
+
+          // --- AQUÍ AJUSTAS EL ÁNGULO (160) ---
+          if ((anguloDer > 145 || anguloIzq > 145) && tiempoTranscurrido > 150) {
             tiempoReaccion = tiempoTranscurrido;
             finalizarGolpe();
           }
@@ -116,7 +114,7 @@
 
     function prepararSiguiente() {
       etapa = "PREPARANDO";
-      statusDiv.innerText = "¡EN GUARDIA! NO TE MUEVAS";
+      statusDiv.innerText = "¡EN GUARDIA!";
       statusDiv.style.background = "#222";
       statusDiv.style.color = "white";
       const espera = Math.floor(Math.random() * 3000) + 2000;
