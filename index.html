@@ -99,7 +99,7 @@
     <button id="btn_entrenar">2. INICIAR ENTRENAMIENTO</button>
   </div>
 
-  <script>
+<script>
     const videoElement = document.getElementById('input_video');
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
@@ -134,11 +134,8 @@
         drawLandmarks(canvasCtx, landmarks, {color: '#FFD700', lineWidth: 1});
 
         if (etapa === "ESTIMULO") {
-          // Detectamos muñecas (puntos 15 y 16)
           const zDer = landmarks[16].z; 
           const zIzq = landmarks[15].z;
-
-          // Sensibilidad ajustada: si el puño se acerca a la cámara
           if (zDer < -0.12 || zIzq < -0.12) {
             tiempoReaccion = performance.now() - tiempoEstimulo;
             finalizarGolpe();
@@ -151,7 +148,7 @@
     function lanzarEstimulo() {
       etapa = "ESTIMULO";
       tiempoEstimulo = performance.now();
-      statusDiv.innerText = "¡GOLPEA!";
+      statusDiv.innerText = "¡GOLPEA YA!";
       statusDiv.style.background = "#FF0000"; 
       statusDiv.style.color = "white";
     }
@@ -159,25 +156,28 @@
     function finalizarGolpe() {
       etapa = "GOLPE";
       const segs = (tiempoReaccion / 1000).toFixed(3);
-      statusDiv.innerText = `REACCIÓN: ${segs}s`;
+      statusDiv.innerText = `TIEMPO: ${segs}s`;
       statusDiv.style.background = "#FFD700"; 
       statusDiv.style.color = "black";
+      // No reiniciamos automáticamente para que el atleta vea su tiempo
     }
 
     function prepararSiguiente() {
-      etapa = "ESPERANDO";
-      statusDiv.innerText = "¡EN GUARDIA!";
+      etapa = "PREPARANDO";
+      statusDiv.innerText = "¡EN GUARDIA! (Espera...)";
       statusDiv.style.background = "#222";
       statusDiv.style.color = "white";
       
-      const espera = Math.floor(Math.random() * 2000) + 2000;
+      const espera = Math.floor(Math.random() * 3000) + 2000;
       setTimeout(() => {
-        if(etapa === "ESPERANDO") lanzarEstimulo();
+        lanzarEstimulo();
       }, espera);
     }
 
-    btnStart.onclick = async () => {
-      statusDiv.innerText = "SOLICITANDO CÁMARA...";
+    // --- CONEXIÓN DE BOTONES MEJORADA ---
+
+    btnStart.addEventListener('click', async () => {
+      statusDiv.innerText = "CONECTANDO IA...";
       try {
         const camera = new Camera(videoElement, {
           onFrame: async () => { await pose.send({image: videoElement}); },
@@ -185,16 +185,17 @@
         });
         await camera.start();
         btnStart.style.display = "none";
-        btnEntrenar.style.display = "block"; // Aquí forzamos que aparezca el botón 2
+        btnEntrenar.style.display = "block"; 
         statusDiv.innerText = "SISTEMA LISTO";
       } catch (e) {
-        statusDiv.innerText = "ERROR DE CÁMARA";
+        statusDiv.innerText = "ERROR DE CÁMARA: " + e;
       }
-    };
+    });
 
-    btnEntrenar.onclick = () => {
+    btnEntrenar.addEventListener('click', () => {
+      console.log("Botón de entrenamiento presionado");
       prepararSiguiente();
-    };
+    });
   </script>
 </body>
 </html>
