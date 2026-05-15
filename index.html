@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-Form AI v6.0 - Dual Velocity</title>
+  <title>Senshi-Form AI v1.0 - Análisis de Tsuki</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -38,9 +38,9 @@
     .stat-grid { display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 15px; }
     .stat-card { background: #1a1a1a; padding: 8px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 9px; display: grid; align-items: center; text-align: center; }
     
-    /* GRID DINÁMICOS AJUSTADOS */
+    /* GRIDS REESTRUCTURADOS */
     .grid-sup { grid-template-columns: 0.4fr 1fr 1fr 1fr 1fr 1.2fr; }
-    .grid-inf { grid-template-columns: 0.4fr 1fr 1fr 1.2fr 1.2fr; }
+    .grid-inf { grid-template-columns: 0.4fr 1fr 1fr 1.2fr 1fr 1fr; }
     
     .best-hit { background: #064e3b !important; border-left: 4px solid #10b981 !important; }
     .worst-hit { background: #7f1d1d !important; border-left: 4px solid #ef4444 !important; }
@@ -52,7 +52,7 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">SENSHI-FORM V6.0</div>
+        <div id="status-display">SENSHI-FORM AI</div>
         <div class="selector-group">
             <div id="btn-mode-vel" class="opt-btn active" onclick="switchModoEvaluacion('VELOCIDAD')">M. VELOCIDAD</div>
             <div id="btn-mode-bio" class="opt-btn" onclick="switchModoEvaluacion('BIOMECANICO')">M. BIOMECÁNICO</div>
@@ -85,7 +85,7 @@
       
       <div class="tabs-row" id="container-tabs" style="display:none;">
          <button id="tab-sup" class="tab-btn active" onclick="cambiarPestaña('SUPERIOR')">Tren Superior / Tiempos</button>
-         <button id="tab-inf" class="tab-btn" onclick="cambiarPestaña('INFERIOR')">Tren Inferior / Giros</button>
+         <button id="tab-inf" class="tab-btn" onclick="cambiarPestaña('INFERIOR')">Tren Inferior / Biomecánica</button>
       </div>
 
       <div class="chart-container"><canvas id="performanceChart"></canvas></div>
@@ -105,25 +105,20 @@
 
     let modo = "OFF", evalMode = "VELOCIDAD", currentTab = "SUPERIOR", selectedArm = "R", facingMode = "user", registros = [], myChart = null;
     let pxPorCm = 0, posInicialPuño = null, buscandoPico = false, picoMaximo = 0, t_inicio = 0, t_pico = 0;
+    let picoPos = null, buscandoPicoRetorno = false, minAnguloRetorno = 180;
     let currentLandmarks = null;
 
     let calibracionBuzzer = { pieApoyoX: 0, pieAtaqueX: 0, rodillaY: 0, distCaderaBase: 1, distHombroBase: 1 };
 
     let audioCtx = null;
     function initAudio() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        if (audioCtx.state === 'suspended') { audioCtx.resume(); }
     }
 
     function playAudio(freq, dur, type="sawtooth") {
-        initAudio();
-        if(!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        initAudio(); if(!audioCtx) return;
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
         osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
         osc.connect(gain); gain.connect(audioCtx.destination);
         gain.gain.setValueAtTime(0.7, audioCtx.currentTime); 
@@ -135,12 +130,11 @@
     pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
     function switchModoEvaluacion(mode) {
-        initAudio();
-        if (modo !== "OFF") return;
+        initAudio(); if (modo !== "OFF") return;
         evalMode = mode;
         document.getElementById('btn-mode-vel').classList.toggle('active', mode === 'VELOCIDAD');
         document.getElementById('btn-mode-bio').classList.toggle('active', mode === 'BIOMECANICO');
-        statusText.innerText = `SENSHI-${mode === 'VELOCIDAD' ? 'REACT' : 'FORM'} V6.0`;
+        statusText.innerText = `SENSHI-${mode === 'VELOCIDAD' ? 'REACT' : 'FORM'} V6.5`;
     }
 
     function switchCam(mode) {
@@ -160,8 +154,7 @@
     pose.onResults((res) => {
       canvasElement.width = videoElement.videoWidth;
       canvasElement.height = videoElement.videoHeight;
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.save(); canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       canvasCtx.drawImage(res.image, 0, 0, canvasElement.width, canvasElement.height);
       
       if (res.poseLandmarks) {
@@ -177,66 +170,69 @@
 
         if (evalMode === "VELOCIDAD") {
             canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = "#FFD700";
-            canvasCtx.beginPath();
-            canvasCtx.moveTo(hombroAtaque.x * canvasElement.width, hombroAtaque.y * canvasElement.height);
+            canvasCtx.beginPath(); canvasCtx.moveTo(hombroAtaque.x * canvasElement.width, hombroAtaque.y * canvasElement.height);
             canvasCtx.lineTo(codoAtaque.x * canvasElement.width, codoAtaque.y * canvasElement.height);
-            canvasCtx.lineTo(muñecaAtaque.x * canvasElement.width, muñecaAtaque.y * canvasElement.height);
-            canvasCtx.stroke();
+            canvasCtx.lineTo(muñecaAtaque.x * canvasElement.width, muñecaAtaque.y * canvasElement.height); canvasCtx.stroke();
             drawLandmarks(canvasCtx, [hombroAtaque, codoAtaque, muñecaAtaque], {color: "#00E5FF", lineWidth: 2}); 
         } 
         else if (evalMode === "BIOMECANICO") {
             const nodeColor = (idx) => [11,13,15,23,25,27,29,31].includes(idx) ? "#00E5FF" : "#FFD700";
             const lineColor = (idx1) => [11,13,23,25,27,29].includes(idx1) ? "#00E5FF" : "#FFD700";
 
-            // Se eliminaron conexiones de torso (11-12, 23-24, 11-23, 12-24). Solo quedan extremidades.
-            const conexionesBio = [
-                [23, 25], [24, 26], [25, 27], [26, 28], [27, 31], [28, 32]
-            ];
-
+            const conexionesBio = [ [23, 25], [24, 26], [25, 27], [26, 28], [27, 31], [28, 32] ];
             conexionesBio.forEach(([i, j]) => {
                 canvasCtx.lineWidth = 3; canvasCtx.strokeStyle = lineColor(i);
-                canvasCtx.beginPath();
-                canvasCtx.moveTo(lm[i].x * canvasElement.width, lm[i].y * canvasElement.height);
-                canvasCtx.lineTo(lm[j].x * canvasElement.width, lm[j].y * canvasElement.height);
-                canvasCtx.stroke();
+                canvasCtx.beginPath(); canvasCtx.moveTo(lm[i].x * canvasElement.width, lm[i].y * canvasElement.height);
+                canvasCtx.lineTo(lm[j].x * canvasElement.width, lm[j].y * canvasElement.height); canvasCtx.stroke();
             });
 
             canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = nodeColor(pArm[0]);
-            canvasCtx.beginPath();
-            canvasCtx.moveTo(hombroAtaque.x * canvasElement.width, hombroAtaque.y * canvasElement.height);
+            canvasCtx.beginPath(); canvasCtx.moveTo(hombroAtaque.x * canvasElement.width, hombroAtaque.y * canvasElement.height);
             canvasCtx.lineTo(codoAtaque.x * canvasElement.width, codoAtaque.y * canvasElement.height);
-            canvasCtx.lineTo(muñecaAtaque.x * canvasElement.width, muñecaAtaque.y * canvasElement.height);
-            canvasCtx.stroke();
+            canvasCtx.lineTo(muñecaAtaque.x * canvasElement.width, muñecaAtaque.y * canvasElement.height); canvasCtx.stroke();
 
             const nodosRequeridos = [11, 12, 23, 24, 25, 26, 31, 32, pArm[1], pArm[2]];
             nodosRequeridos.forEach(idx => {
                 canvasCtx.fillStyle = nodeColor(idx); canvasCtx.beginPath();
-                canvasCtx.arc(lm[idx].x * canvasElement.width, lm[idx].y * canvasElement.height, 5, 0, 2 * Math.PI);
-                canvasCtx.fill();
+                canvasCtx.arc(lm[idx].x * canvasElement.width, lm[idx].y * canvasElement.height, 5, 0, 2 * Math.PI); canvasCtx.fill();
             });
         }
 
+        // LÓGICA DE DETECCIÓN SIMÉTRICA POR PICOS
         if (modo === "ATAQUE") {
-          if (!buscandoPico && angArm > 160) { buscandoPico = true; picoMaximo = angArm; }
+          if (!buscandoPico && angArm > 155) { buscandoPico = true; picoMaximo = angArm; }
           if (buscandoPico) {
-            if (angArm >= picoMaximo) {
-                picoMaximo = angArm;
-            } else {
-                // Punto B: Pico alcanzado. Congelamos datos de impacto y abrimos fase RETORNO
+            if (angArm >= picoMaximo) { picoMaximo = angArm; } 
+            else {
+                // PUNTO B ALCANZADO: Ejecuta sonido de impacto inmediatamente
                 t_pico = performance.now();
+                playAudio(1000, 0.12, "sine"); 
+                picoPos = { x: muñecaAtaque.x, y: muñecaAtaque.y };
+                
+                // Inicializa variables para la fase inversa (recojo)
                 modo = "RETORNO";
                 buscandoPico = false;
-                // Guardamos momentáneamente la posición de máxima extensión
-                this.picoPos = {x: muñecaAtaque.x, y: muñecaAtaque.y};
+                buscandoPicoRetorno = false;
+                minAnguloRetorno = angArm;
             }
           }
-        } else if (modo === "RETORNO") {
-            // Evaluamos distancia actual con respecto al punto inicial (A)
-            let distFaltante = Math.hypot((muñecaAtaque.x - posInicialPuño.x)*canvasElement.width, (muñecaAtaque.y - posInicialPuño.y)*canvasElement.height) / pxPorCm;
-            // Si regresa al menos al 85% de la guardia o el brazo se flexiona completamente
-            if (distFaltante < 8 || angArm < 70) {
-                finalizarCicloGolpe(muñecaAtaque);
+        } 
+        else if (modo === "RETORNO") {
+            // El brazo se está retrayendo (el ángulo disminuye)
+            if (!buscandoPicoRetorno && angArm < 130) {
+                buscandoPicoRetorno = true;
+                minAnguloRetorno = angArm;
             }
+            if (buscandoPicoRetorno) {
+                if (angArm <= minAnguloRetorno) {
+                    minAnguloRetorno = angArm; // Sigue retrayéndose
+                } else {
+                    // PICO INVERSO DETECTADO (El brazo terminó de encogerse y empieza a desacelerar o abrirse)
+                    finalizarCicloGolpe(muñecaAtaque);
+                }
+            }
+            // Mecanismo de seguridad temporal por si no detecta el pico inverso
+            if ((performance.now() - t_pico) > 800) { finalizarCicloGolpe(muñecaAtaque); }
         }
       }
       canvasCtx.restore();
@@ -245,8 +241,9 @@
     function finalizarCicloGolpe(posFinal) {
       const t_fin = performance.now();
       const durAtaque = (t_pico - t_inicio) / 1000;
-      const durRetorno = (t_fin - t_pico) / 1000;
-      
+      let durRetorno = (t_fin - t_pico) / 1000;
+      if(durRetorno < 0.04) durRetorno = 0.04; // Umbral físico mínimo anti-ruido
+
       const dCm = Math.hypot((picoPos.x - posInicialPuño.x) * canvasElement.width, (picoPos.y - posInicialPuño.y) * canvasElement.height) / pxPorCm;
       const vMs = (dCm / 100) / durAtaque;
       const vKmh = vMs * 3.6;
@@ -264,32 +261,24 @@
       let bioData = { avancePieApoyo: 0, avancePieAtaque: 0, bajaRodilla: 0, rotCadera: 0, rotHombro: 0 };
 
       if (currentLandmarks) {
-          const lm = currentLandmarks;
-          const esDerecho = (selectedArm === "R");
-          const idxPieAtaque = esDerecho ? 32 : 31; 
-          const idxPieApoyo = esDerecho ? 31 : 32;  
-          const idxRodillaAtaque = esDerecho ? 26 : 25;
+          const lm = currentLandmarks; const esDerecho = (selectedArm === "R");
+          const idxPieAtaque = esDerecho ? 32 : 31; const idxPieApoyo = esDerecho ? 31 : 32; const idxRodillaAtaque = esDerecho ? 26 : 25;
 
           bioData.avancePieApoyo = Math.abs(lm[idxPieApoyo].x - calibracionBuzzer.pieApoyoX) * canvasElement.width / pxPorCm;
           bioData.avancePieAtaque = Math.abs(lm[idxPieAtaque].x - calibracionBuzzer.pieAtaqueX) * canvasElement.width / pxPorCm;
           bioData.bajaRodilla = (lm[idxRodillaAtaque].y - calibracionBuzzer.rodillaY) * canvasElement.height / pxPorCm;
 
-          const distCaderaActual = Math.abs(lm[23].x - lm[24].x);
-          const distHombroActual = Math.abs(lm[11].x - lm[12].x);
-
-          let ratioCadera = Math.min(distCaderaActual / calibracionBuzzer.distCaderaBase, 1);
-          let ratioHombro = Math.min(distHombroActual / calibracionBuzzer.distHombroBase, 1);
-
+          let ratioCadera = Math.min(Math.abs(lm[23].x - lm[24].x) / calibracionBuzzer.distCaderaBase, 1);
+          let ratioHombro = Math.min(Math.abs(lm[11].x - lm[12].x) / calibracionBuzzer.distHombroBase, 1);
           bioData.rotCadera = Math.acos(ratioCadera) * (180 / Math.PI);
           bioData.rotHombro = Math.acos(ratioHombro) * (180 / Math.PI);
       }
 
-      playAudio(1000, 0.15, "sine"); 
       modo = "PAUSA";
-      registros.push({ tiempo: durAtaque, kmh: vKmh, vRetorno: vKmhRetorno, distancia: dCm, fuerza: fuerzaKg, bio: bioData, modoRegistro: evalMode });
+      registros.push({ tiempo: durAtaque, kmh: vKmh, vRetorno: vKmhRetorno, distancia: dCm, fuerza: fuerzaKg, bio: bioData });
       
-      if (durAtaque < 0.75) { statusText.style.background = "#28a745"; statusText.innerText = `OK RETORNO: ${vKmhRetorno.toFixed(1)} km/h`; }
-      else { statusText.style.background = "#ffc107"; statusText.innerText = `RECUPERANDO GOLPE`; }
+      statusText.style.background = "#222"; statusText.style.color = "#FFD700";
+      statusText.innerText = `ATQ: ${vKmh.toFixed(1)} | RET: ${vKmhRetorno.toFixed(1)} km/h`;
 
       if (registros.length < 10) setTimeout(esperaAleatoria, 2500);
       else { playAudio(150, 1.2, "sawtooth"); mostrarResultadosFinales(); }
@@ -303,17 +292,15 @@
     }
 
     function mostrarResultadosFinales() {
-      modo = "FIN";
-      document.getElementById('results-panel').style.display = "block";
+      modo = "FIN"; document.getElementById('results-panel').style.display = "block";
       document.getElementById('container-tabs').style.display = (evalMode === "BIOMECANICO") ? "flex" : "none";
-      currentTab = "SUPERIOR";
-      renderizarGraficaYTabla();
+      currentTab = "SUPERIOR"; renderizarGraficaYTabla();
     }
 
     function renderizarGraficaYTabla() {
       const name = document.getElementById('atleta-nombre').value.toUpperCase();
       const avgK = (registros.reduce((a, b) => a + b.kmh, 0) / 10).toFixed(1);
-      document.getElementById('res-promedios').innerHTML = `ALUMNO: ${name} | PROMEDIO: ${avgK} km/h`;
+      document.getElementById('res-promedios').innerHTML = `ALUMNO: ${name} | PROMEDIO EN IMPACTO: ${avgK} km/h`;
 
       let bestIdx = 0, worstIdx = 0, minScore = Infinity, maxScore = -Infinity;
       registros.forEach((r, i) => {
@@ -325,31 +312,42 @@
       const ctx = document.getElementById('performanceChart').getContext('2d');
       if (myChart) myChart.destroy();
 
-      let datasetData = [];
+      let datasetData = [], opcionesEscala = {};
+      
       if (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") {
           datasetData = [
             { label: 'T. Reacción (s)', data: registros.map(r => r.tiempo), borderColor: '#fff', tension: 0.3, yAxisID: 'yLeft' },
             { label: 'Vel. Ataque (km/h)', data: registros.map(r => r.kmh), borderColor: '#FFD700', tension: 0.3, yAxisID: 'yRight' },
-            { label: 'Vel. Retorno (km/h)', data: registros.map(r => r.vRetorno), borderColor: '#D8B4FE', tension: 0.3, yAxisID: 'yRight' } // Morado solicitado
+            { label: 'Vel. Retorno (km/h)', data: registros.map(r => r.vRetorno), borderColor: '#D8B4FE', tension: 0.3, yAxisID: 'yRight' }
           ];
+          opcionesEscala = {
+                yLeft: { position: 'left', title: { display: true, text: 'Segundos' } },
+                yRight: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'km/h' } }
+          };
       } else {
+          // PESTAÑA INFERIOR CON CERO CENTRADO ABSOLUTO EN LA RODILLA
+          let maxValRodilla = Math.max(...registros.map(r => Math.abs(r.bio.bajaRodilla))) || 10;
+          let limiteSimetrico = Math.ceil(maxValRodilla * 1.3); // Margen dinámico centrado
+
           datasetData = [
             { label: 'Avance Apoyo (cm)', data: registros.map(r => r.bio.avancePieApoyo), borderColor: '#fff', tension: 0.3, yAxisID: 'yLeft' },
-            { label: 'Efecto Rodilla (cm)', data: registros.map(r => -r.bio.bajaRodilla), borderColor: '#FFD700', tension: 0.3, yAxisID: 'yRight' }
+            { label: 'Efecto Rodilla (cm)', data: registros.map(r => -r.bio.bajaRodilla), borderColor: '#FFD700', tension: 0.1, yAxisID: 'yRight' }
           ];
+          opcionesEscala = {
+                yLeft: { position: 'left', title: { display: true, text: 'Avance Pie (cm)' } },
+                yRight: { 
+                    position: 'right', 
+                    grid: { drawOnChartArea: false }, 
+                    min: -limiteSimetrico, 
+                    max: limiteSimetrico, // Al ser idénticos min y max, el 0 se fija al centro
+                    title: { display: true, text: 'Rodilla (cm) [-=Baja / +=Sube]' } 
+                }
+          };
       }
 
       myChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: registros.map((_, i) => `G${i+1}`), datasets: datasetData },
-        options: { 
-            responsive: true, maintainAspectRatio: false,
-            scales: { 
-                yLeft: { position: 'left', title: { display: true, text: (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") ? 'Segundos / cm' : 'Centímetros' } },
-                yRight: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") ? 'km/h' : 'Centímetros' } }
-            },
-            plugins: { legend: { labels: { color: '#fff' } } }
-        }
+        type: 'line', data: { labels: registros.map((_, i) => `G${i+1}`), datasets: datasetData },
+        options: { responsive: true, maintainAspectRatio: false, scales: opcionesEscala, plugins: { legend: { labels: { color: '#fff' } } } }
       });
 
       const header = document.getElementById('table-header');
@@ -371,18 +369,17 @@
           });
       } else {
           header.className = "grid-inf";
-          header.innerHTML = `<span>#</span><span>AV. APOYO</span><span>AV. ATAQUE</span><span>F. RODILLA</span><span>GIROS (H / C)</span>`;
+          header.innerHTML = `<span>#</span><span>AV. APOYO</span><span>AV. ATAQUE</span><span>F. RODILLA</span><span>G. HOMBRO</span><span>G. CADERA</span>`;
           registros.forEach((r, i) => {
             let extraClass = (i === bestIdx) ? "best-hit" : (i === worstIdx ? "worst-hit" : "");
             let signoRodilla = r.bio.bajaRodilla >= 0 ? "-" : "+";
-            let gHombro = r.bio ? r.bio.rotHombro.toFixed(0) : "0";
-            let gCadera = r.bio ? r.bio.rotCadera.toFixed(0) : "0";
             html += `<div class="stat-card grid-inf ${extraClass}">
                 <span>${i+1}</span>
                 <span>${r.bio.avancePieApoyo.toFixed(0)} cm</span>
                 <span>${r.bio.avancePieAtaque.toFixed(0)} cm</span>
                 <span style="color:#38bdf8">${signoRodilla}${Math.abs(r.bio.bajaRodilla).toFixed(0)} cm</span>
-                <span style="color:#a855f7; font-weight:bold;">${gHombro}° / ${gCadera}°</span>
+                <span style="color:#00E5FF; font-weight:bold;">${r.bio.rotHombro.toFixed(0)}°</span>
+                <span style="color:#a855f7; font-weight:bold;">${r.bio.rotCadera.toFixed(0)}°</span>
             </div>`;
           });
       }
@@ -392,7 +389,6 @@
     function copiarDatosPortapapeles() {
         const nombre = document.getElementById('atleta-nombre').value.toUpperCase();
         const fecha = new Date().toLocaleDateString();
-        
         let txt = `REPORTE DE RENDIMIENTO - ACADEMIA SENSHI-KAN\n`;
         txt += `ALUMNO: ${nombre}\nFECHA: ${fecha}\nMODO EVALUACIÓN: ${evalMode}\n`;
         txt += `========================================================================\n`;
@@ -404,23 +400,16 @@
             txt += `${i+1}\t${r.tiempo.toFixed(3)}\t${r.kmh.toFixed(1)}\t${r.vRetorno.toFixed(1)}\t${r.distancia.toFixed(0)}\t${r.fuerza.toFixed(1)}\t${rB.avancePieApoyo.toFixed(0)}\t${rB.avancePieAtaque.toFixed(0)}\t${sRodilla}${Math.abs(rB.bajaRodilla).toFixed(0)}\t${rB.rotHombro.toFixed(0)}°\t${rB.rotCadera.toFixed(0)}°\n`;
         });
         
-        navigator.clipboard.writeText(txt).then(() => {
-            alert("¡Reporte completo (Ataque, Retorno y Biomecánica) copiado al portapapeles!");
-        }).catch(err => {
-            alert("Error al copiar datos automáticamente.");
-        });
+        navigator.clipboard.writeText(txt).then(() => { alert("¡Reporte de precisión de picos copiado!"); }).catch(err => { alert("Error al copiar."); });
     }
 
     function prepararAtleta() {
-        initAudio();
-        let cuenta = 5;
+        initAudio(); let cuenta = 5;
         document.getElementById('btn-start-serie').style.display = "none";
-        // Ciclo forzado de clics audibles asegurados por la inicialización previa
         const timer = setInterval(() => {
             statusText.style.background = "#FFD700"; statusText.style.color = "#000";
             statusText.innerText = `PREPÁRATE: ${cuenta}`;
-            playAudio(600, 0.08, "sine");
-            cuenta--;
+            playAudio(600, 0.08, "sine"); cuenta--;
             if(cuenta < 0) { clearInterval(timer); iniciarSerie(); }
         }, 1000);
     }
@@ -430,18 +419,14 @@
       setTimeout(() => {
         if(modo === "ESPERA") {
           if (currentLandmarks) {
-              const lm = currentLandmarks;
-              const esDerecho = (selectedArm === "R");
-              calibracionBuzzer.pieAtaqueX = lm[esDerecho ? 32 : 31].x; 
-              calibracionBuzzer.pieApoyoX = lm[esDerecho ? 31 : 32].x;
+              const lm = currentLandmarks; const esDerecho = (selectedArm === "R");
+              calibracionBuzzer.pieAtaqueX = lm[esDerecho ? 32 : 31].x; calibracionBuzzer.pieApoyoX = lm[esDerecho ? 31 : 32].x;
               calibracionBuzzer.rodillaY = lm[esDerecho ? 26 : 25].y;
-              calibracionBuzzer.distCaderaBase = Math.abs(lm[23].x - lm[24].x) || 1;
-              calibracionBuzzer.distHombroBase = Math.abs(lm[11].x - lm[12].x) || 1;
+              calibracionBuzzer.distCaderaBase = Math.abs(lm[23].x - lm[24].x) || 1; calibracionBuzzer.distHombroBase = Math.abs(lm[11].x - lm[12].x) || 1;
               posInicialPuño = { x: lm[esDerecho ? 16 : 15].x, y: lm[esDerecho ? 16 : 15].y }; 
           }
           modo = "ATAQUE"; t_inicio = performance.now();
-          playAudio(160, 0.4, "sawtooth"); 
-          statusText.innerText = "¡GOLPEA!"; statusText.style.background = "#f00";
+          playAudio(160, 0.4, "sawtooth"); statusText.innerText = "¡GOLPEA!"; statusText.style.background = "#f00";
         }
       }, Math.random() * 3000 + 2000);
     }
@@ -449,9 +434,7 @@
     async function activarCamara() {
       initAudio();
       const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, facingMode: facingMode, width: 640, height: 480 });
-      camera.start();
-      document.getElementById('btn-camera').style.display = "none";
-      document.getElementById('btn-start-serie').style.display = "block";
+      camera.start(); document.getElementById('btn-camera').style.display = "none"; document.getElementById('btn-start-serie').style.display = "block";
     }
 
     function iniciarSerie() { registros = []; document.getElementById('results-panel').style.display = "none"; esperaAleatoria(); }
