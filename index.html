@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-Form AI v5.5 - Professional Analytics</title>
+  <title>Senshi-Form AI v6.0 - Dual Velocity</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -38,9 +38,9 @@
     .stat-grid { display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 15px; }
     .stat-card { background: #1a1a1a; padding: 8px; border-radius: 8px; border-left: 4px solid #FFD700; font-size: 9px; display: grid; align-items: center; text-align: center; }
     
-    /* GRID DINÁMICOS */
-    .grid-sup { grid-template-columns: 0.4fr 1fr 1fr 1fr 1.2fr 1fr; }
-    .grid-inf { grid-template-columns: 0.4fr 1fr 1fr 1.2fr 1fr; }
+    /* GRID DINÁMICOS AJUSTADOS */
+    .grid-sup { grid-template-columns: 0.4fr 1fr 1fr 1fr 1fr 1.2fr; }
+    .grid-inf { grid-template-columns: 0.4fr 1fr 1fr 1.2fr 1.2fr; }
     
     .best-hit { background: #064e3b !important; border-left: 4px solid #10b981 !important; }
     .worst-hit { background: #7f1d1d !important; border-left: 4px solid #ef4444 !important; }
@@ -52,7 +52,7 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">SENSHI-FORM V5.5</div>
+        <div id="status-display">SENSHI-FORM V6.0</div>
         <div class="selector-group">
             <div id="btn-mode-vel" class="opt-btn active" onclick="switchModoEvaluacion('VELOCIDAD')">M. VELOCIDAD</div>
             <div id="btn-mode-bio" class="opt-btn" onclick="switchModoEvaluacion('BIOMECANICO')">M. BIOMECÁNICO</div>
@@ -84,8 +84,8 @@
       <div id="res-promedios" style="text-align:center; font-size:11px; margin:4px 0; color:#ddd;"></div>
       
       <div class="tabs-row" id="container-tabs" style="display:none;">
-         <button id="tab-sup" class="tab-btn active" onclick="cambiarPestaña('SUPERIOR')">Tren Superior / Hombro</button>
-         <button id="tab-inf" class="tab-btn" onclick="cambiarPestaña('INFERIOR')">Tren Inferior / Cadera</button>
+         <button id="tab-sup" class="tab-btn active" onclick="cambiarPestaña('SUPERIOR')">Tren Superior / Tiempos</button>
+         <button id="tab-inf" class="tab-btn" onclick="cambiarPestaña('INFERIOR')">Tren Inferior / Giros</button>
       </div>
 
       <div class="chart-container"><canvas id="performanceChart"></canvas></div>
@@ -104,14 +104,24 @@
     const statusText = document.getElementById('status-display');
 
     let modo = "OFF", evalMode = "VELOCIDAD", currentTab = "SUPERIOR", selectedArm = "R", facingMode = "user", registros = [], myChart = null;
-    let pxPorCm = 0, posInicialPuño = null, buscandoPico = false, picoMaximo = 0, t_inicio = 0;
+    let pxPorCm = 0, posInicialPuño = null, buscandoPico = false, picoMaximo = 0, t_inicio = 0, t_pico = 0;
     let currentLandmarks = null;
 
     let calibracionBuzzer = { pieApoyoX: 0, pieAtaqueX: 0, rodillaY: 0, distCaderaBase: 1, distHombroBase: 1 };
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioCtx = null;
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
     function playAudio(freq, dur, type="sawtooth") {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        initAudio();
+        if(!audioCtx) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
@@ -125,11 +135,12 @@
     pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
     function switchModoEvaluacion(mode) {
+        initAudio();
         if (modo !== "OFF") return;
         evalMode = mode;
         document.getElementById('btn-mode-vel').classList.toggle('active', mode === 'VELOCIDAD');
         document.getElementById('btn-mode-bio').classList.toggle('active', mode === 'BIOMECANICO');
-        statusText.innerText = `SENSHI-${mode === 'VELOCIDAD' ? 'REACT' : 'FORM'} V5.5`;
+        statusText.innerText = `SENSHI-${mode === 'VELOCIDAD' ? 'REACT' : 'FORM'} V6.0`;
     }
 
     function switchCam(mode) {
@@ -165,21 +176,20 @@
         if (angArm > 180) angArm = 360 - angArm;
 
         if (evalMode === "VELOCIDAD") {
-            canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = "#00FF00";
+            canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = "#FFD700";
             canvasCtx.beginPath();
             canvasCtx.moveTo(hombroAtaque.x * canvasElement.width, hombroAtaque.y * canvasElement.height);
             canvasCtx.lineTo(codoAtaque.x * canvasElement.width, codoAtaque.y * canvasElement.height);
             canvasCtx.lineTo(muñecaAtaque.x * canvasElement.width, muñecaAtaque.y * canvasElement.height);
             canvasCtx.stroke();
-            drawLandmarks(canvasCtx, [hombroAtaque, codoAtaque, muñecaAtaque], {color: "#00E5FF", lineWidth: 2}); // Color Cían de alto contraste
+            drawLandmarks(canvasCtx, [hombroAtaque, codoAtaque, muñecaAtaque], {color: "#00E5FF", lineWidth: 2}); 
         } 
         else if (evalMode === "BIOMECANICO") {
-            // Reemplazo Estricto: Izquierda = Azul Eléctrico Cían (#00E5FF), Derecha = Amarillo Mostaza (#FFD700)
             const nodeColor = (idx) => [11,13,15,23,25,27,29,31].includes(idx) ? "#00E5FF" : "#FFD700";
             const lineColor = (idx1) => [11,13,23,25,27,29].includes(idx1) ? "#00E5FF" : "#FFD700";
 
+            // Se eliminaron conexiones de torso (11-12, 23-24, 11-23, 12-24). Solo quedan extremidades.
             const conexionesBio = [
-                [11, 12], [23, 24], [11, 23], [12, 24],
                 [23, 25], [24, 26], [25, 27], [26, 28], [27, 31], [28, 32]
             ];
 
@@ -209,19 +219,41 @@
         if (modo === "ATAQUE") {
           if (!buscandoPico && angArm > 160) { buscandoPico = true; picoMaximo = angArm; }
           if (buscandoPico) {
-            if (angArm >= picoMaximo) picoMaximo = angArm;
-            else finalizarGolpe(picoMaximo, muñecaAtaque);
+            if (angArm >= picoMaximo) {
+                picoMaximo = angArm;
+            } else {
+                // Punto B: Pico alcanzado. Congelamos datos de impacto y abrimos fase RETORNO
+                t_pico = performance.now();
+                modo = "RETORNO";
+                buscandoPico = false;
+                // Guardamos momentáneamente la posición de máxima extensión
+                this.picoPos = {x: muñecaAtaque.x, y: muñecaAtaque.y};
+            }
           }
+        } else if (modo === "RETORNO") {
+            // Evaluamos distancia actual con respecto al punto inicial (A)
+            let distFaltante = Math.hypot((muñecaAtaque.x - posInicialPuño.x)*canvasElement.width, (muñecaAtaque.y - posInicialPuño.y)*canvasElement.height) / pxPorCm;
+            // Si regresa al menos al 85% de la guardia o el brazo se flexiona completamente
+            if (distFaltante < 8 || angArm < 70) {
+                finalizarCicloGolpe(muñecaAtaque);
+            }
         }
       }
       canvasCtx.restore();
     });
 
-    function finalizarGolpe(maxExt, posFinal) {
-      const dur = (performance.now() - t_inicio) / 1000;
-      const dCm = Math.hypot((posFinal.x - posInicialPuño.x) * canvasElement.width, (posFinal.y - posInicialPuño.y) * canvasElement.height) / pxPorCm;
-      const vMs = (dCm / 100) / dur;
+    function finalizarCicloGolpe(posFinal) {
+      const t_fin = performance.now();
+      const durAtaque = (t_pico - t_inicio) / 1000;
+      const durRetorno = (t_fin - t_pico) / 1000;
+      
+      const dCm = Math.hypot((picoPos.x - posInicialPuño.x) * canvasElement.width, (picoPos.y - posInicialPuño.y) * canvasElement.height) / pxPorCm;
+      const vMs = (dCm / 100) / durAtaque;
       const vKmh = vMs * 3.6;
+
+      const dCmRetorno = Math.hypot((posFinal.x - picoPos.x) * canvasElement.width, (posFinal.y - picoPos.y) * canvasElement.height) / pxPorCm;
+      const vMsRetorno = (dCmRetorno / 100) / durRetorno;
+      const vKmhRetorno = vMsRetorno * 3.6;
       
       const masaCuerpo = parseFloat(document.getElementById('peso-kg').value);
       const masaEfectiva = masaCuerpo * 0.06; 
@@ -231,18 +263,15 @@
 
       let bioData = { avancePieApoyo: 0, avancePieAtaque: 0, bajaRodilla: 0, rotCadera: 0, rotHombro: 0 };
 
-      if (evalMode === "BIOMECANICO" && currentLandmarks) {
+      if (currentLandmarks) {
           const lm = currentLandmarks;
           const esDerecho = (selectedArm === "R");
-          
           const idxPieAtaque = esDerecho ? 32 : 31; 
           const idxPieApoyo = esDerecho ? 31 : 32;  
           const idxRodillaAtaque = esDerecho ? 26 : 25;
 
           bioData.avancePieApoyo = Math.abs(lm[idxPieApoyo].x - calibracionBuzzer.pieApoyoX) * canvasElement.width / pxPorCm;
           bioData.avancePieAtaque = Math.abs(lm[idxPieAtaque].x - calibracionBuzzer.pieAtaqueX) * canvasElement.width / pxPorCm;
-
-          // Se preserva la medida real: positivo si baja (esperado), negativo si sube (no deseado) para mapear al gráfico
           bioData.bajaRodilla = (lm[idxRodillaAtaque].y - calibracionBuzzer.rodillaY) * canvasElement.height / pxPorCm;
 
           const distCaderaActual = Math.abs(lm[23].x - lm[24].x);
@@ -256,12 +285,11 @@
       }
 
       playAudio(1000, 0.15, "sine"); 
-      buscandoPico = false; modo = "PAUSA";
-      registros.push({ tiempo: dur, kmh: vKmh, distancia: dCm, fuerza: fuerzaKg, bio: bioData, modoRegistro: evalMode });
+      modo = "PAUSA";
+      registros.push({ tiempo: durAtaque, kmh: vKmh, vRetorno: vKmhRetorno, distancia: dCm, fuerza: fuerzaKg, bio: bioData, modoRegistro: evalMode });
       
-      if (dur < 0.75) { statusText.style.background = "#28a745"; statusText.innerText = `EXCELENTE: ${dur.toFixed(2)}s`; }
-      else if (dur <= 0.99) { statusText.style.background = "#ffc107"; statusText.innerText = `BIEN: ${dur.toFixed(2)}s`; }
-      else { statusText.style.background = "#dc3545"; statusText.innerText = `LENTO: ${dur.toFixed(2)}s`; }
+      if (durAtaque < 0.75) { statusText.style.background = "#28a745"; statusText.innerText = `OK RETORNO: ${vKmhRetorno.toFixed(1)} km/h`; }
+      else { statusText.style.background = "#ffc107"; statusText.innerText = `RECUPERANDO GOLPE`; }
 
       if (registros.length < 10) setTimeout(esperaAleatoria, 2500);
       else { playAudio(150, 1.2, "sawtooth"); mostrarResultadosFinales(); }
@@ -300,11 +328,11 @@
       let datasetData = [];
       if (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") {
           datasetData = [
-            { label: 'Tiempo de Reacción (s)', data: registros.map(r => r.tiempo), borderColor: '#fff', tension: 0.3, yAxisID: 'yLeft' },
-            { label: 'Velocidad (km/h)', data: registros.map(r => r.kmh), borderColor: '#FFD700', tension: 0.3, yAxisID: 'yRight' }
+            { label: 'T. Reacción (s)', data: registros.map(r => r.tiempo), borderColor: '#fff', tension: 0.3, yAxisID: 'yLeft' },
+            { label: 'Vel. Ataque (km/h)', data: registros.map(r => r.kmh), borderColor: '#FFD700', tension: 0.3, yAxisID: 'yRight' },
+            { label: 'Vel. Retorno (km/h)', data: registros.map(r => r.vRetorno), borderColor: '#D8B4FE', tension: 0.3, yAxisID: 'yRight' } // Morado solicitado
           ];
       } else {
-          // Pestaña Inferior: Desplazamiento pie de apoyo y descenso de rodilla (Invertido en UI: si baja es negativo)
           datasetData = [
             { label: 'Avance Apoyo (cm)', data: registros.map(r => r.bio.avancePieApoyo), borderColor: '#fff', tension: 0.3, yAxisID: 'yLeft' },
             { label: 'Efecto Rodilla (cm)', data: registros.map(r => -r.bio.bajaRodilla), borderColor: '#FFD700', tension: 0.3, yAxisID: 'yRight' }
@@ -317,8 +345,8 @@
         options: { 
             responsive: true, maintainAspectRatio: false,
             scales: { 
-                yLeft: { position: 'left', title: { display: true, text: (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") ? 'Segundos' : 'Centímetros' } },
-                yRight: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") ? 'km/h' : 'Centímetros (Negativo = Baja)' } }
+                yLeft: { position: 'left', title: { display: true, text: (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") ? 'Segundos / cm' : 'Centímetros' } },
+                yRight: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") ? 'km/h' : 'Centímetros' } }
             },
             plugins: { legend: { labels: { color: '#fff' } } }
         }
@@ -330,31 +358,31 @@
 
       if (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") {
           header.className = "grid-sup";
-          header.innerHTML = `<span>#</span><span>T. REACCIÓN</span><span>VELOCIDAD</span><span>DIST. PUÑO</span><span>FUERZA INT.</span><span>GIRO HOMBRO</span>`;
+          header.innerHTML = `<span>#</span><span>T. REACCIÓN</span><span>VEL. ATQ</span><span style="color:#D8B4FE">RETORNO</span><span>DISTANCIA</span><span>FUERZA INT.</span>`;
           registros.forEach((r, i) => {
             let extraClass = (i === bestIdx) ? "best-hit" : (i === worstIdx ? "worst-hit" : "");
-            let gHombro = (r.bio) ? `${r.bio.rotHombro.toFixed(0)}°` : "---";
             html += `<div class="stat-card grid-sup ${extraClass}">
                 <span>${i+1}</span><span>${r.tiempo.toFixed(3)}s</span>
                 <span style="color:#FFD700">${r.kmh.toFixed(1)} km/h</span>
+                <span style="color:#D8B4FE; font-weight:bold;">${r.vRetorno.toFixed(1)} km/h</span>
                 <span>${r.distancia.toFixed(0)} cm</span>
                 <span style="color:#0f0">${r.fuerza.toFixed(1)} kg</span>
-                <span style="color:#00E5FF; font-weight:bold;">${gHombro}</span>
             </div>`;
           });
       } else {
           header.className = "grid-inf";
-          header.innerHTML = `<span>#</span><span>AV. APOYO</span><span>AV. ATAQUE</span><span>F. RODILLA</span><span>GIRO CADERA</span>`;
+          header.innerHTML = `<span>#</span><span>AV. APOYO</span><span>AV. ATAQUE</span><span>F. RODILLA</span><span>GIROS (H / C)</span>`;
           registros.forEach((r, i) => {
             let extraClass = (i === bestIdx) ? "best-hit" : (i === worstIdx ? "worst-hit" : "");
-            // Mostrar signo negativo si baja para concordar con la solicitud visual
             let signoRodilla = r.bio.bajaRodilla >= 0 ? "-" : "+";
+            let gHombro = r.bio ? r.bio.rotHombro.toFixed(0) : "0";
+            let gCadera = r.bio ? r.bio.rotCadera.toFixed(0) : "0";
             html += `<div class="stat-card grid-inf ${extraClass}">
                 <span>${i+1}</span>
                 <span>${r.bio.avancePieApoyo.toFixed(0)} cm</span>
                 <span>${r.bio.avancePieAtaque.toFixed(0)} cm</span>
                 <span style="color:#38bdf8">${signoRodilla}${Math.abs(r.bio.bajaRodilla).toFixed(0)} cm</span>
-                <span style="color:#a855f7; font-weight:bold;">${r.bio.rotCadera.toFixed(0)}°</span>
+                <span style="color:#a855f7; font-weight:bold;">${gHombro}° / ${gCadera}°</span>
             </div>`;
           });
       }
@@ -368,28 +396,30 @@
         let txt = `REPORTE DE RENDIMIENTO - ACADEMIA SENSHI-KAN\n`;
         txt += `ALUMNO: ${nombre}\nFECHA: ${fecha}\nMODO EVALUACIÓN: ${evalMode}\n`;
         txt += `========================================================================\n`;
-        txt += `GOLPE\tT.REAC(s)\tVEL(km/h)\tDIST(cm)\tFUERZA(kg)\tAV.APOYO(cm)\tAV.ATQ(cm)\tRODILLA(cm)\tG.HOMBRO\tG.CADERA\n`;
+        txt += `GOLPE\tT.REAC(s)\tVEL_ATQ(km/h)\tRETORNO(km/h)\tDIST(cm)\tFUERZA(kg)\tAV.APOYO(cm)\tAV.ATQ(cm)\tRODILLA(cm)\tG.HOMBRO\tG.CADERA\n`;
         
         registros.forEach((r, i) => {
             let rB = r.bio || { avancePieApoyo:0, avancePieAtaque:0, bajaRodilla:0, rotHombro:0, rotCadera:0 };
             let sRodilla = rB.bajaRodilla >= 0 ? "-" : "+";
-            txt += `${i+1}\t${r.tiempo.toFixed(3)}\t${r.kmh.toFixed(1)}\t${r.distancia.toFixed(0)}\t${r.fuerza.toFixed(1)}\t${rB.avancePieApoyo.toFixed(0)}\t${rB.avancePieAtaque.toFixed(0)}\t${sRodilla}${Math.abs(rB.bajaRodilla).toFixed(0)}\t${rB.rotHombro.toFixed(0)}°\t${rB.rotCadera.toFixed(0)}°\n`;
+            txt += `${i+1}\t${r.tiempo.toFixed(3)}\t${r.kmh.toFixed(1)}\t${r.vRetorno.toFixed(1)}\t${r.distancia.toFixed(0)}\t${r.fuerza.toFixed(1)}\t${rB.avancePieApoyo.toFixed(0)}\t${rB.avancePieAtaque.toFixed(0)}\t${sRodilla}${Math.abs(rB.bajaRodilla).toFixed(0)}\t${rB.rotHombro.toFixed(0)}°\t${rB.rotCadera.toFixed(0)}°\n`;
         });
         
         navigator.clipboard.writeText(txt).then(() => {
-            alert("¡Reporte copiado con éxito! Listo para pegar y analizar.");
+            alert("¡Reporte completo (Ataque, Retorno y Biomecánica) copiado al portapapeles!");
         }).catch(err => {
             alert("Error al copiar datos automáticamente.");
         });
     }
 
     function prepararAtleta() {
+        initAudio();
         let cuenta = 5;
         document.getElementById('btn-start-serie').style.display = "none";
+        // Ciclo forzado de clics audibles asegurados por la inicialización previa
         const timer = setInterval(() => {
             statusText.style.background = "#FFD700"; statusText.style.color = "#000";
             statusText.innerText = `PREPÁRATE: ${cuenta}`;
-            playAudio(440, 0.05, "sine");
+            playAudio(600, 0.08, "sine");
             cuenta--;
             if(cuenta < 0) { clearInterval(timer); iniciarSerie(); }
         }, 1000);
@@ -417,6 +447,7 @@
     }
 
     async function activarCamara() {
+      initAudio();
       const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, facingMode: facingMode, width: 640, height: 480 });
       camera.start();
       document.getElementById('btn-camera').style.display = "none";
