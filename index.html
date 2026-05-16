@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-Form AI v7.1 - Cloud AI Engine</title>
+  <title>Senshi-Form AI v7.2 - Cloud AI Engine</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -56,7 +56,7 @@
 
   <div id="top-controls">
     <div class="btn-row">
-        <div id="status-display">SENSHI-FORM V7.1</div>
+        <div id="status-display">SENSHI-FORM V7.2</div>
         <div class="selector-group">
             <div id="btn-mode-vel" class="opt-btn active" onclick="switchModoEvaluacion('VELOCIDAD')">M. VELOCIDAD</div>
             <div id="btn-mode-bio" class="opt-btn" onclick="switchModoEvaluacion('BIOMECANICO')">M. BIOMECÁNICO</div>
@@ -85,7 +85,7 @@
     <canvas id="output_canvas" class="mirror"></canvas>
     
     <div id="results-panel">
-      <h3 id="report-title" style="color:#FFD700; text-align:center; margin:0; font-size:14px;">REPORTE DE RENDIMIENTO V7.1</h3>
+      <h3 id="report-title" style="color:#FFD700; text-align:center; margin:0; font-size:14px;">REPORTE DE RENDIMIENTO V7.2</h3>
       <div id="res-promedios" style="text-align:center; font-size:11px; margin:4px 0; color:#ddd;"></div>
       
       <!-- AI Interpretation Box -->
@@ -122,6 +122,7 @@
     let pxPorCm = 0, posInicialPuño = null, buscandoPico = false, picoMaximo = 0, t_inicio = 0, t_pico = 0;
     let picoPos = null, buscandoPicoRetorno = false, minAnguloRetorno = 180;
     let currentLandmarks = null;
+    let localStream = null;
 
     let calibracionBuzzer = { pieApoyoX: 0, pieAtaqueX: 0, rodillaY: 0, distCaderaBase: 1, distHombroBase: 1 };
 
@@ -186,7 +187,7 @@
         evalMode = mode;
         document.getElementById('btn-mode-vel').classList.toggle('active', mode === 'VELOCIDAD');
         document.getElementById('btn-mode-bio').classList.toggle('active', mode === 'BIOMECANICO');
-        statusText.innerText = `SENSHI-${mode === 'VELOCIDAD' ? 'REACT' : 'FORM'} V7.1`;
+        statusText.innerText = `SENSHI-${mode === 'VELOCIDAD' ? 'REACT' : 'FORM'} V7.2`;
     }
 
     function switchCam(mode) {
@@ -195,6 +196,7 @@
       document.getElementById('btn-cam-front').classList.toggle('active', mode === 'user');
       document.getElementById('btn-cam-back').classList.toggle('active', mode === 'environment');
       canvasElement.classList.toggle('mirror', mode === 'user');
+      if(localStream) { activarCamara(); } // Si ya estaba encendida, reinicia con el cambio de cámara
     }
 
     function selectArm(side) {
@@ -204,8 +206,8 @@
     }
 
     pose.onResults((res) => {
-      canvasElement.width = videoElement.videoWidth;
-      canvasElement.height = videoElement.videoHeight;
+      canvasElement.width = videoElement.videoWidth || 640;
+      canvasElement.height = videoElement.videoHeight || 480;
       canvasCtx.save(); canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       canvasCtx.drawImage(res.image, 0, 0, canvasElement.width, canvasElement.height);
       
@@ -424,8 +426,54 @@
 
     async function activarCamara() {
       initAudio();
-      const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, facingMode: facingMode, width: 640, height: 480 });
-      camera.start(); document.getElementById('btn-camera').style.display = "none"; document.getElementById('btn-start-serie').style.display = "block";
+      statusText.innerText = "CONECTANDO CÁMARA...";
+      
+      // Si ya existía un stream activo, lo cerramos para evitar bloqueos de hardware
+      if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+          video: {
+              facingMode: facingMode,
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+          },
+          audio: false
+      };
+
+      try {
+          localStream = await navigator.mediaDevices.getUserMedia(constraints);
+          videoElement.srcObject = localStream;
+          
+          // Asegurar la reproducción del video nativo
+          await videoElement.play();
+          
+          // Crear el bucle manual de envío de frames a MediaPipe Pose (Método Robusto)
+          function procesarFrame() {
+              if (!videoElement.paused && !videoElement.ended) {
+                  pose.send({ image: videoElement }).then(() => {
+                      requestAnimationFrame(procesarFrame);
+                  }).catch(err => {
+                      console.error("Error MediaPipe Pose:", err);
+                      requestAnimationFrame(procesarFrame);
+                  });
+              } else {
+                  requestAnimationFrame(procesarFrame);
+              }
+          }
+          
+          requestAnimationFrame(procesarFrame);
+          
+          statusText.innerText = "CÁMARA ONLINE";
+          document.getElementById('btn-camera').style.display = "none"; 
+          document.getElementById('btn-start-serie').style.display = "block";
+          
+      } catch (err) {
+          console.error("Error al acceder a la cámara nativa:", err);
+          statusText.innerText = "ERROR DE CÁMARA / PERMISOS";
+          alert("No se pudo acceder a la cámara. Asegúrate de dar permisos de cámara al sitio web y usar HTTPS.");
+      }
     }
 
     function iniciarSerie() { registros = []; document.getElementById('results-panel').style.display = "none"; esperaAleatoria(); }
