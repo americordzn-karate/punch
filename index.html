@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-Form AI v7.6 - Gemini Free Edition</title>
+  <title>Senshi-Form AI v7.5 - Gemini Fixed Edition</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -92,7 +92,7 @@
       <h3 id="report-title" style="color:#FFD700; text-align:center; margin:0; font-size:14px;">REPORTE DE RENDIMIENTO V7.5</h3>
       <div id="res-promedios" style="text-align:center; font-size:11px; margin:4px 0; color:#ddd;"></div>
       
-      <!-- AI Interpretation Box (Gemini On-Demand) -->
+      <!-- AI Interpretation Box (Gemini On-Demand Corrected) -->
       <div class="ai-box">
         <div class="ai-header">
             <div class="ai-title-group">
@@ -154,7 +154,6 @@
         osc.start(); osc.stop(audioCtx.currentTime + dur);
     }
 
-    // Al cargar la ventana, recuperamos la API Key de Gemini si ya se guardó antes
     window.addEventListener('DOMContentLoaded', () => {
         const savedKey = localStorage.getItem('senshi_gemini_key');
         if(savedKey) {
@@ -165,7 +164,7 @@
     const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
     pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
-    // Integración limpia y asíncrona con Google Gemini (1.5 Flash - Nivel Gratuito)
+    // Corrección de Endpoint: Cambiado a gemini-1.5-flash-latest exigido por la v1beta
     async function generarInterpretacionAI() {
         const apiKey = document.getElementById('ai-api-key').value.trim();
         if(!apiKey) {
@@ -173,7 +172,6 @@
             return;
         }
 
-        // Guardamos la llave localmente para evitar tener que volver a pegarla
         localStorage.setItem('senshi_gemini_key', apiKey);
 
         if(registros.length === 0) {
@@ -188,8 +186,8 @@
         
         const promptText = `Eres un Sensei experto en biomecánica de Karate. Analiza la siguiente serie de 10 golpes (Gyaku Zuki) y da un consejo técnico directo y sumamente breve (máximo 4 líneas) en español enfocado en optimizar la relación ataque-retorno (Hikite) e inercia corporal usando estos datos de telemetría:\n${dataSummary}`;
 
-        // Endpoint oficial para el modelo rápido y gratuito de Google AI Studio
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // Endpoint corregido usando el alias "-latest" compatible con v1beta
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
         try {
             const response = await fetch(url, {
@@ -214,7 +212,7 @@
                 document.getElementById('ai-interpretation-text').innerText = "Error inesperado al procesar la respuesta de la IA.";
             }
         } catch (e) {
-            document.getElementById('ai-interpretation-text').innerText = "Error de red. Asegúrate de que la clave de API sea correcta y tengas internet.";
+            document.getElementById('ai-interpretation-text').innerText = "Error de red o endpoint denegado. Verifica tu conexión.";
             console.error(e);
         } finally {
             document.getElementById('ai-loading-spinner').style.display = "none";
@@ -416,6 +414,7 @@
       listContainer.innerHTML = html;
     }
 
+    // Copiado completo estructurado
     function copiarDatosPortapapeles() {
         const nombre = document.getElementById('atleta-nombre').value;
         let txt = `REPORTE SENSHI-FORM: ${nombre}\n`;
