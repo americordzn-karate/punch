@@ -166,7 +166,6 @@
             });
             const resData = await response.json();
             
-            // Extracción robusta de texto de la API de Gemini
             if (resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts && resData.candidates[0].content.parts[0]) {
                 document.getElementById('ai-interpretation-text').innerText = resData.candidates[0].content.parts[0].text;
             } else if (resData.error) {
@@ -177,7 +176,7 @@
         } catch (e) {
             document.getElementById('ai-interpretation-text').innerText = "Error de conexión con la API de Cloud AI. Revisa tu clave o red.";
             console.error(e);
-        } disable {
+        } finally {
             document.getElementById('ai-loading-spinner').style.display = "none";
         }
     }
@@ -285,7 +284,7 @@
       const masaEfectiva = parseFloat(document.getElementById('peso-kg').value) * 0.06; 
       const fuerzaKg = (masaEfectiva * (vKmh/3.6)) / 0.08 / 9.81;
 
-      let bioData = { avancePieAppoyo: 0, avancePieAtaque: 0, bajaRodilla: 0, rotCadera: 0, rotHombro: 0 };
+      let bioData = { avancePieApoyo: 0, avancePieAtaque: 0, bajaRodilla: 0, rotCadera: 0, rotHombro: 0 };
       if (currentLandmarks) {
           const lm = currentLandmarks; const esDerecho = (selectedArm === "R");
           bioData.avancePieApoyo = Math.abs(lm[esDerecho ? 31 : 32].x - calibracionBuzzer.pieApoyoX) * canvasElement.width / pxPorCm;
