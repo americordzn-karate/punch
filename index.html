@@ -165,15 +165,19 @@
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
             const resData = await response.json();
-            if(resData.candidates && resData.candidates[0].content.parts[0].text) {
+            
+            // Extracción robusta de texto de la API de Gemini
+            if (resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts && resData.candidates[0].content.parts[0]) {
                 document.getElementById('ai-interpretation-text').innerText = resData.candidates[0].content.parts[0].text;
+            } else if (resData.error) {
+                document.getElementById('ai-interpretation-text').innerText = `Error de API: ${resData.error.message}`;
             } else {
-                document.getElementById('ai-interpretation-text').innerText = "Error en el formato de respuesta de la API.";
+                document.getElementById('ai-interpretation-text').innerText = "La API respondió pero el formato de los datos no fue el esperado.";
             }
         } catch (e) {
             document.getElementById('ai-interpretation-text').innerText = "Error de conexión con la API de Cloud AI. Revisa tu clave o red.";
             console.error(e);
-        } finally {
+        } disable {
             document.getElementById('ai-loading-spinner').style.display = "none";
         }
     }
@@ -281,7 +285,7 @@
       const masaEfectiva = parseFloat(document.getElementById('peso-kg').value) * 0.06; 
       const fuerzaKg = (masaEfectiva * (vKmh/3.6)) / 0.08 / 9.81;
 
-      let bioData = { avancePieApoyo: 0, avancePieAtaque: 0, bajaRodilla: 0, rotCadera: 0, rotHombro: 0 };
+      let bioData = { avancePieAppoyo: 0, avancePieAtaque: 0, bajaRodilla: 0, rotCadera: 0, rotHombro: 0 };
       if (currentLandmarks) {
           const lm = currentLandmarks; const esDerecho = (selectedArm === "R");
           bioData.avancePieApoyo = Math.abs(lm[esDerecho ? 31 : 32].x - calibracionBuzzer.pieApoyoX) * canvasElement.width / pxPorCm;
@@ -354,12 +358,18 @@
       const header = document.getElementById('table-header');
       const listContainer = document.getElementById('stats-list');
       let html = "";
+      
       if (evalMode === "VELOCIDAD" || currentTab === "SUPERIOR") {
           header.className = "grid-sup";
-          header.innerHTML = `<span>#</span><span>T. REACCIÓN</span><span>VEL. ATQ</span><span>RETORNO</span><span>DISTANCIA</span><span>FUERZA</span>`;
+          header.innerHTML = `<span>#</span><span>REACCIÓN</span><span>VEL. ATQ</span><span>RETORNO</span><span>DISTANCIA</span><span>FUERZA</span>`;
           registros.forEach((r, i) => {
             html += `<div class="stat-card grid-sup ${i===bestIdx?'best-hit':i===worstIdx?'worst-hit':''}">
-                <span>${i+1}</span><span>${r.tiempo.toFixed(3)}s</span><span>${r.kmh.toFixed(1)}</span><span>${r.vRetorno.toFixed(1)}</span><span>${r.distancia.toFixed(0)}</span><span>${r.fuerza.toFixed(1)}kg</span>
+                <span>${i+1}</span>
+                <span>${r.tiempo.toFixed(3)} s</span>
+                <span>${r.kmh.toFixed(1)} km/h</span>
+                <span>${r.vRetorno.toFixed(1)} km/h</span>
+                <span>${r.distancia.toFixed(0)} cm</span>
+                <span>${r.fuerza.toFixed(1)} kg</span>
             </div>`;
           });
       } else {
@@ -367,7 +377,12 @@
           header.innerHTML = `<span>#</span><span>AV. APOYO</span><span>AV. ATAQUE</span><span>F. RODILLA</span><span>G. HOMBRO</span><span>G. CADERA</span>`;
           registros.forEach((r, i) => {
             html += `<div class="stat-card grid-inf ${i===bestIdx?'best-hit':''}">
-                <span>${i+1}</span><span>${r.bio.avancePieApoyo.toFixed(0)}</span><span>${r.bio.avancePieAtaque.toFixed(0)}</span><span>${r.bio.bajaRodilla.toFixed(0)}</span><span>${r.bio.rotHombro.toFixed(0)}°</span><span>${r.bio.rotCadera.toFixed(0)}°</span>
+                <span>${i+1}</span>
+                <span>${r.bio.avancePieApoyo.toFixed(0)} cm</span>
+                <span>${r.bio.avancePieAtaque.toFixed(0)} cm</span>
+                <span>${r.bio.bajaRodilla.toFixed(0)} cm</span>
+                <span>${r.bio.rotHombro.toFixed(0)}°</span>
+                <span>${r.bio.rotCadera.toFixed(0)}°</span>
             </div>`;
           });
       }
