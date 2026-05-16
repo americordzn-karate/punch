@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Senshi-Form AI v7.5 - Proxy Edition</title>
+  <title>Senshi-Form AI v7.5 - Proxy Fixed Edition</title>
   
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -91,7 +91,7 @@
       <h3 id="report-title" style="color:#FFD700; text-align:center; margin:0; font-size:14px;">REPORTE DE RENDIMIENTO V7.5</h3>
       <div id="res-promedios" style="text-align:center; font-size:11px; margin:4px 0; color:#ddd;"></div>
       
-      <!-- AI Interpretation Box (Integrando Opción 1: Proxy Inverso) -->
+      <!-- AI Interpretation Box -->
       <div class="ai-box">
         <div class="ai-header">
             <div class="ai-title-group">
@@ -107,7 +107,7 @@
             <input type="password" id="ai-api-key" placeholder="Pega tu Google Gemini Key aquí" style="flex-grow:1; font-size:10px; padding:4px; text-align:left; border-color:#2563eb;">
         </div>
 
-        <div id="ai-interpretation-text">Haz clic en el botón "Analizar con IA" para procesar la telemetría a través del túnel seguro de la opción 1.</div>
+        <div id="ai-interpretation-text">Haz clic en el botón "Analizar con IA" para procesar la telemetría a través del túnel seguro del Proxy CORS.</div>
       </div>
 
       <div class="tabs-row" id="container-tabs" style="display:none;">
@@ -145,7 +145,7 @@
 
     function playAudio(freq, dur, type="sawtooth") {
         initAudio(); if(!audioCtx) return;
-        const osc = audioCtx.createOscillator(); const gain = application.audioCtx ? audioCtx.createGain() : audioCtx.createGain();
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
         osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
         osc.connect(gain); gain.connect(audioCtx.destination);
         gain.gain.setValueAtTime(0.7, audioCtx.currentTime); 
@@ -163,7 +163,6 @@
     const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
     pose.setOptions({ modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
-    // IMPLEMENTACIÓN COMPLETA DE LA OPCIÓN 1 (PROXY INVERSO ANTI-CORS)
     async function generarInterpretacionAI() {
         const apiKey = document.getElementById('ai-api-key').value.trim();
         if(!apiKey) {
@@ -185,7 +184,6 @@
         
         const promptText = `Eres un Sensei experto en biomecánica de Karate. Analiza la siguiente serie de golpes (Gyaku Zuki) y da un consejo técnico directo y muy breve (máximo 4 líneas) en español enfocado en optimizar la relación ataque-retorno (Hikite) e inercia corporal usando estos datos de telemetría:\n${dataSummary}`;
 
-        // URL original de Google envuelta en el Proxy de escape de restricciones de navegador (Opción 1)
         const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
         const url = `https://corsproxy.io/?` + encodeURIComponent(targetUrl);
 
@@ -212,10 +210,9 @@
                 document.getElementById('ai-interpretation-text').innerText = data.candidates[0].content.parts[0].text;
             } else {
                 document.getElementById('ai-interpretation-text').innerText = "Respuesta recibida pero con formato inesperado o API Key errónea.";
-                console.log("Estructura devuelta:", data);
             }
         } catch (e) {
-            document.getElementById('ai-interpretation-text').innerText = `❌ Error superado por proxy pero rechazado: ${e.message}. Verifica que tu API Key sea de Gemini (Google AI Studio) y esté activa.`;
+            document.getElementById('ai-interpretation-text').innerText = `❌ Error: ${e.message}. Verifica que tu API Key sea válida y esté activa.`;
             console.error(e);
         } finally {
             document.getElementById('ai-loading-spinner').style.display = "none";
